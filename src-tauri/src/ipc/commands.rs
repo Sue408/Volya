@@ -1,5 +1,4 @@
 use crate::agent::session::{SessionLoop, SessionState};
-use crate::workspace::data::WorkData;
 use crate::workspace::manager::WorkManager;
 use tauri::State;
 use tokio::sync::Mutex;
@@ -19,8 +18,10 @@ pub struct AppState {
 pub async fn create_work(app_handle: tauri::AppHandle, state: State<'_, AppState>, title: String) -> Result<String, String> {
     use tauri::Emitter;
 
-    let work_data = WorkData::new(&title);
-    let session = SessionLoop::new(work_data, 1); // 默认 Lv1
+    let mut manager_lock = state.manager.lock().await;
+    let ws = manager_lock.create(&title).await.map_err(|e| format!("创建失败: {}", e))?;
+    let work_data = ws.data.clone();
+    let session = SessionLoop::new(work_data, 1);
 
     let mut session_lock = state.session.lock().await;
     *session_lock = Some(session);
@@ -29,7 +30,50 @@ pub async fn create_work(app_handle: tauri::AppHandle, state: State<'_, AppState
         "state": "idle", "tool_name": None::<String>
     }));
 
-    Ok(format!("作品「{}」已创建", title))
+    Ok(serde_json::json!({ "id": ws.id, "title": title }).to_string())
+}
+
+/// 列出所有已有作品
+#[tauri::command]
+pub async fn list_works(state: State<'_, AppState>) -> Result<Vec<serde_json::Value>, String> {
+    let manager_lock = state.manager.lock().await;
+    let summaries = manager_lock.list_works().await.map_err(|e| format!("列出作品失败: {}", e))?;
+    Ok(summaries.into_iter().map(|s| {
+        serde_json::json!({
+            "id": s.id,
+            "title": s.title,
+            "status": s.status,
+            "completed_words": s.completed_words,
+            "updated_at": s.updated_at,
+        })
+    }).collect())
+}
+
+/// 打开一个已有作品（安全卸载旧的 → 加载 → 初始化会话）
+#[tauri::command]
+pub async fn open_work(app_handle: tauri::AppHandle, state: State<'_, AppState>, id: String) -> Result<serde_json::Value, String> {
+    use tauri::Emitter;
+
+    let mut manager_lock = state.manager.lock().await;
+    let ws = manager_lock.open(&id).await.map_err(|e| format!("打开作品失败: {}", e))?;
+
+    // 用 WorkManager 中的实际数据初始化会话
+    let work_data = ws.data.clone();
+    let session = SessionLoop::new(work_data, ws.data.meta.permission_level);
+
+    let mut session_lock = state.session.lock().await;
+    *session_lock = Some(session);
+
+    let _ = app_handle.emit("agent:state", serde_json::json!({
+        "state": "idle", "tool_name": None::<String>
+    }));
+
+    Ok(serde_json::json!({
+        "id": ws.id,
+        "title": ws.data.meta.title,
+        "status": ws.data.meta.status,
+        "completed_words": ws.data.meta.completed_words,
+    }))
 }
 
 /// 获取 Agent 的工具描述（用于前端展示）
