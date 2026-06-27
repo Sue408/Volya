@@ -90,7 +90,7 @@ function generateScale(hex: string): ColorScale {
 // ─── 预设主题 ───
 
 export const THEMES: Record<string, { primary: string; name: string }> = {
-  coral:   { primary: '#BF7B5A', name: '柔珊瑚' },
+  coral:   { primary: '#C9603A', name: '珊瑚橙' },
   sage:    { primary: '#6C8360', name: '鼠尾绿' },
   apricot: { primary: '#E58F53', name: '暖杏' },
   plum:    { primary: '#8B5E7C', name: '紫罗兰' },
@@ -101,31 +101,51 @@ export const THEMES: Record<string, { primary: string; name: string }> = {
 
 import { ref } from 'vue'
 
-const currentPrimary = ref('#BF7B5A')
+const currentPrimary = ref('#C9603A')
 
 export function useThemeColor() {
-  /** 从色阶取色，带回退 */
+  /** 从色阶取色 */
   function shade(scale: ColorScale, key: keyof ColorScale): string {
     return scale[key]
   }
 
-  /** 解析主色并写入 CSS 变量（仅强调色，不影响背景） */
+  /** 计算 hex 的相对亮度 (0~1)，用于判断深色底还是浅色底 */
+  function luminance(hex: string): number {
+    const h = hex.replace('#', '')
+    const r = parseInt(h.substring(0, 2), 16) / 255
+    const g = parseInt(h.substring(2, 4), 16) / 255
+    const b = parseInt(h.substring(4, 6), 16) / 255
+    const toLinear = (c: number) => c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)
+    return 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b)
+  }
+
+  /** 根据背景亮度返回浅色或深色文字 */
+  function textOnBg(bgHex: string): string {
+    return luminance(bgHex) > 0.5 ? '#1C1B1A' : '#FFFFFF'
+  }
+
+  /** 解析主色并写入 CSS 变量（仅强调色，不影响背景/边框） */
   function applyScale(primary: string) {
     const scale = generateScale(primary)
     const root = document.documentElement
 
-    // 写入色阶变量（供组件直接使用）
+    // 写入色阶变量
     const keys = Object.keys(scale) as (keyof ColorScale)[]
     keys.forEach(k => {
       root.style.setProperty(`--coral-${k}`, scale[k])
     })
 
-    // 仅覆盖强调色 Token，不动背景/文字/边框
-    root.style.setProperty('--accent-primary', shade(scale, '500'))
-    root.style.setProperty('--accent-secondary', shade(scale, '400'))
-    root.style.setProperty('--accent-hover', shade(scale, '600'))
-    root.style.setProperty('--text-link', shade(scale, '500'))
-    root.style.setProperty('--shadow-focus', `0 0 0 3px ${shade(scale, '500')}33`)
+    const primary400 = shade(scale, '400')
+    const primary500 = shade(scale, '500')
+
+    // 覆盖强调色，并自动计算文字颜色
+    root.style.setProperty('--accent-primary', primary400)
+    root.style.setProperty('--accent-secondary', shade(scale, '300'))
+    root.style.setProperty('--accent-hover', primary500)
+    root.style.setProperty('--text-link', primary400)
+    root.style.setProperty('--text-on-color', textOnBg(primary400))
+    root.style.setProperty('--text-on-accent', textOnBg(primary400))
+    root.style.setProperty('--shadow-focus', `0 0 0 3px ${primary400}33`)
 
     currentPrimary.value = primary
   }
@@ -144,7 +164,7 @@ export function useThemeColor() {
     if (saved && /^#[0-9a-f]{6}$/i.test(saved)) {
       applyScale(saved)
     } else {
-      applyScale('#BF7B5A') // 默认柔珊瑚
+      applyScale('#C9603A') // 默认珊瑚
     }
   }
 

@@ -27,7 +27,7 @@
   --transition-fast:150ms ease; --transition-normal:250ms ease; --transition-slow:400ms ease;
 
   /* ─── 固定语义色 ─── */
-  --success:#5a9e6f; --warning:#d4a556; --error:#c94f4f; --info:#5b8db8;
+  --success:#5a9e6f; --warning:#d4a556; --error:#C46A6A; --info:#5b8db8;
 
   /* ═══ Light 主题 — 固定暖中性色 ═══ */
   --bg-primary:#F4F3EE; --bg-secondary:#FFFFFF; --bg-tertiary:#EEEDE8;
@@ -43,9 +43,9 @@
   --shadow-lg:0 8px 30px rgba(28,27,26,0.10);
 
   /* ═══ 强调色（默认珊瑚橙，会被 JS 覆盖） ═══ */
-  --accent-primary:#BF7B5A; --accent-secondary:#D4946E; --accent-hover:#A86444;
-  --text-link:#BF7B5A; --text-on-accent:#FFFFFF;
-  --shadow-focus:0 0 0 3px rgba(191,123,90,0.20);
+  --accent-primary:#D4815A; --accent-secondary:#E0B595; --accent-hover:#C15F3C;
+  --text-link:#D4815A; --text-on-accent:#FFFFFF;
+  --shadow-focus:0 0 0 3px rgba(212,129,90,0.20);
 }
 
 /* ═══ Dark 主题 ═══ */
@@ -62,8 +62,8 @@
   --shadow-sm:0 1px 2px rgba(0,0,0,0.25); --shadow-md:0 4px 12px rgba(0,0,0,0.35);
   --shadow-lg:0 8px 30px rgba(0,0,0,0.45);
 
-  --accent-primary:#D4946E; --accent-secondary:#BF7B5A; --accent-hover:#E0AD8C;
-  --text-link:#D4946E; --text-on-accent:#1C1B1A;
+  --accent-primary:#D4815A; --accent-secondary:#E0B595; --accent-hover:#C15F3C;
+  --text-link:#D4815A; --text-on-accent:#1C1B1A;
   --shadow-focus:0 0 0 3px rgba(212,148,110,0.25);
 }
 
@@ -82,8 +82,8 @@
     --shadow-sm:0 1px 2px rgba(0,0,0,0.25); --shadow-md:0 4px 12px rgba(0,0,0,0.35);
     --shadow-lg:0 8px 30px rgba(0,0,0,0.45);
 
-    --accent-primary:#D4946E; --accent-secondary:#BF7B5A; --accent-hover:#E0AD8C;
-    --text-link:#D4946E; --text-on-accent:#1C1B1A;
+    --accent-primary:#D4815A; --accent-secondary:#E0B595; --accent-hover:#C15F3C;
+    --text-link:#D4815A; --text-on-accent:#1C1B1A;
     --shadow-focus:0 0 0 3px rgba(212,148,110,0.25);
   }
 }

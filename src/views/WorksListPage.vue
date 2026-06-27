@@ -7,6 +7,7 @@ import { useWorks } from '../composables/useWorks'
 const router = useRouter()
 const { works, loading, listWorks, createWork, deleteWork } = useWorks()
 
+const hoverNew = ref(false)
 const creating = ref(false)
 const showNewDialog = ref(false)
 const newTitle = ref('')
@@ -63,18 +64,25 @@ function statusLabel(status: string): string {
       <!-- Control bar -->
       <div class="control-bar">
         <span class="control-label">我的作品</span>
-        <button class="btn-new" @click="showNewDialog = true">
-          <span class="btn-new-text">新建作品</span>
-          <Plus :size="16" color="white" class="btn-new-icon" />
+        <button
+          class="btn-new"
+          :class="{ expanded: hoverNew }"
+          @mouseenter="hoverNew = true"
+          @mouseleave="hoverNew = false"
+          @click="showNewDialog = true"
+        >
+          <template v-if="hoverNew">
+            <Plus :size="16" />
+            <span class="btn-new-label">新建作品</span>
+          </template>
+          <Plus v-else :size="16" />
         </button>
       </div>
 
       <!-- Works list -->
       <div v-if="!loading" class="works-list-vertical">
-        <div v-if="works.length === 0" class="works-placeholder">
-          <div class="placeholder-line"></div>
-          <div class="placeholder-line short"></div>
-          <div class="placeholder-line"></div>
+        <div v-if="works.length === 0" class="works-empty">
+          <p class="empty-hint">还没有作品，点击右上角 + 开始创作吧</p>
         </div>
 
         <div
@@ -184,6 +192,7 @@ function statusLabel(status: string): string {
 .page-subtitle {
   font-family: var(--font-display);
   font-size: var(--font-size-lg);
+  font-weight: 500;
   color: var(--text-tertiary);
 }
 
@@ -207,19 +216,19 @@ function statusLabel(status: string): string {
 }
 
 .control-label {
-  font-size: var(--font-size-sm);
-  font-weight: 500;
+  font-size: var(--font-size-base);
+  font-weight: 600;
   color: var(--text-secondary);
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
-/* ─── 新建按钮：+ 固定右侧，文字向左展开 ─── */
+/* ─── 新建按钮：v-if 切换两种状态 ─── */
 .btn-new {
   display: flex;
-  flex-direction: row-reverse;
   align-items: center;
-  gap: 0;
+  justify-content: center;
+  gap: var(--space-1);
   width: 36px;
   height: 36px;
   padding: 0;
@@ -228,34 +237,23 @@ function statusLabel(status: string): string {
   background: var(--accent-primary);
   color: var(--text-on-color);
   cursor: pointer;
-  overflow: hidden;
-  transition: width 0.25s ease, background var(--transition-fast);
+  transition: width 0.25s ease, box-shadow 0.25s ease, padding 0.25s ease;
   white-space: nowrap;
   flex-shrink: 0;
-  justify-content: flex-end;
+  overflow: hidden;
 }
 
-.btn-new:hover {
+.btn-new.expanded {
   width: 130px;
-  gap: var(--space-1);
-  padding-left: var(--space-4);
-  background: var(--accent-hover);
+  padding: 0 var(--space-4);
+  box-shadow: 0 0 12px rgba(201,96,58,0.35);
 }
 
-.btn-new-icon {
-  flex-shrink: 0;
-}
-
-.btn-new-text {
+.btn-new-label {
   font-family: var(--font-sans);
   font-size: var(--font-size-sm);
   font-weight: 500;
-  opacity: 0;
-  transition: opacity 0.15s ease 0.1s;
-}
-
-.btn-new:hover .btn-new-text {
-  opacity: 1;
+  color: var(--text-on-color);
 }
 
 /* ─── 纵向作品列表 ─── */
@@ -306,6 +304,7 @@ function statusLabel(status: string): string {
 .row-delete:hover {
   background: var(--error);
   color: white;
+  opacity: 0.85;
 }
 
 .row-delete.loading {
@@ -358,22 +357,17 @@ function statusLabel(status: string): string {
   color: var(--accent-primary);
 }
 
-/* ─── 占位符 ─── */
-.works-placeholder {
+/* ─── 空状态 ─── */
+.works-empty {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-  padding: var(--space-8) var(--space-4);
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-10) var(--space-4);
 }
 
-.placeholder-line {
-  height: 16px;
-  background: var(--bg-tertiary);
-  border-radius: var(--radius-sm);
-}
-
-.placeholder-line.short {
-  width: 60%;
+.empty-hint {
+  font-size: var(--font-size-base);
+  color: var(--text-tertiary);
 }
 
 /* ─── 加载 ─── */
@@ -439,7 +433,7 @@ function statusLabel(status: string): string {
 }
 
 .btn-danger:hover {
-  opacity: 0.9;
+  background: #B05A5A;
 }
 
 /* ===========================================
