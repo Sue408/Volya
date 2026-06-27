@@ -103,3 +103,84 @@ impl Gate {
         }
     }
 }
+
+// ─── 单元测试 ───
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_permission_level_from_u8() {
+        assert!(matches!(PermissionLevel::from_u8(0), PermissionLevel::Lv0Suggestion));
+        assert!(matches!(PermissionLevel::from_u8(1), PermissionLevel::Lv1SemiAuto));
+        assert!(matches!(PermissionLevel::from_u8(2), PermissionLevel::Lv2FullAuto));
+        assert!(matches!(PermissionLevel::from_u8(99), PermissionLevel::Lv1SemiAuto)); // 默认
+    }
+
+    #[test]
+    fn test_lv0_readonly_allowed() {
+        let gate = Gate::new(PermissionLevel::Lv0Suggestion);
+        match gate.check("get_graph", ToolSensitivity::ReadOnly) {
+            GateDecision::Allowed => {},
+            other => panic!("Lv0 只读应该允许，得到: {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_lv0_write_needs_approval() {
+        let gate = Gate::new(PermissionLevel::Lv0Suggestion);
+        match gate.check("create_node", ToolSensitivity::Write) {
+            GateDecision::NeedsApproval { .. } => {},
+            other => panic!("Lv0 写入需要审批，得到: {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_lv1_readonly_allowed() {
+        let gate = Gate::new(PermissionLevel::Lv1SemiAuto);
+        assert!(matches!(gate.check("get_graph", ToolSensitivity::ReadOnly), GateDecision::Allowed));
+    }
+
+    #[test]
+    fn test_lv1_write_allowed() {
+        let gate = Gate::new(PermissionLevel::Lv1SemiAuto);
+        assert!(matches!(gate.check("create_node", ToolSensitivity::Write), GateDecision::Allowed));
+    }
+
+    #[test]
+    fn test_lv1_dangerous_needs_approval() {
+        let gate = Gate::new(PermissionLevel::Lv1SemiAuto);
+        match gate.check("remove_node", ToolSensitivity::Dangerous) {
+            GateDecision::NeedsApproval { .. } => {},
+            other => panic!("Lv1 危险操作需要审批，得到: {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_lv2_always_allowed() {
+        let gate = Gate::new(PermissionLevel::Lv2FullAuto);
+        assert!(matches!(gate.check("remove_node", ToolSensitivity::Dangerous), GateDecision::Allowed));
+        assert!(matches!(gate.check("create_node", ToolSensitivity::Write), GateDecision::Allowed));
+        assert!(matches!(gate.check("get_graph", ToolSensitivity::ReadOnly), GateDecision::Allowed));
+    }
+
+    #[test]
+    fn test_classify_tool() {
+        assert!(matches!(Gate::classify_tool("get_work_meta"), ToolSensitivity::ReadOnly));
+        assert!(matches!(Gate::classify_tool("get_graph"), ToolSensitivity::ReadOnly));
+        assert!(matches!(Gate::classify_tool("search_nodes"), ToolSensitivity::ReadOnly));
+        assert!(matches!(Gate::classify_tool("create_node"), ToolSensitivity::Write));
+        assert!(matches!(Gate::classify_tool("update_work_meta"), ToolSensitivity::Write));
+        assert!(matches!(Gate::classify_tool("remove_node"), ToolSensitivity::Dangerous));
+        assert!(matches!(Gate::classify_tool("remove_edge"), ToolSensitivity::Dangerous));
+        assert!(matches!(Gate::classify_tool("unknown_tool"), ToolSensitivity::Write)); // 默认保守
+    }
+
+    #[test]
+    fn test_set_level() {
+        let mut gate = Gate::new(PermissionLevel::Lv0Suggestion);
+        assert!(matches!(gate.current_level(), PermissionLevel::Lv0Suggestion));
+        gate.set_level(PermissionLevel::Lv2FullAuto);
+        assert!(matches!(gate.current_level(), PermissionLevel::Lv2FullAuto));
+    }
+}

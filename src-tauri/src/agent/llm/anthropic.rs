@@ -3,6 +3,18 @@ use crate::agent::tool::ToolDef;
 use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::sync::OnceLock;
+
+/// 全局复用 HTTP 客户端（reqwest::Client 内部是 Arc，clone 极廉价）
+fn global_http_client() -> reqwest::Client {
+    static CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
+    CLIENT.get_or_init(|| {
+        reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(120))
+            .build()
+            .expect("创建 HTTP 客户端失败")
+    }).clone()
+}
 
 /// ============================================================
 /// Anthropic Messages API 客户端
@@ -138,7 +150,7 @@ impl AnthropicClient {
             model: config.model.clone(),
             max_tokens: config.max_tokens,
             temperature: config.temperature,
-            http_client: reqwest::Client::new(),
+            http_client: global_http_client(),
         }
     }
 

@@ -257,3 +257,149 @@ pub enum GraphError {
     #[error("Cannot add edge: would create a cycle")]
     CycleDetected,
 }
+
+// ─── 单元测试 ───
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::graph::node::{EntityKind, NodeData};
+
+    fn make_node(name: &str, category: NodeCategory) -> Node {
+        let data = match &category {
+            NodeCategory::Entity(EntityKind::Character) => NodeData::Character {
+                name: name.to_string(), age: None, gender: None,
+                appearance: None, personality: None, background: None, motivation: None,
+            },
+            NodeCategory::Event => NodeData::Event {
+                title: name.to_string(), summary: None, chapter_id: None,
+            },
+            NodeCategory::Arc => NodeData::Arc {
+                title: name.to_string(), summary: None, status: Default::default(),
+            },
+            NodeCategory::Chapter => NodeData::Chapter {
+                title: name.to_string(), content: String::new(), word_count: 0, status: Default::default(),
+            },
+            _ => NodeData::Concept {
+                name: name.to_string(), description: None, category: None, rules: None,
+            },
+        };
+        Node::new(name, category, data)
+    }
+
+    #[test]
+    fn test_graph_new_is_empty() {
+        let g = Graph::new();
+        assert!(g.all_nodes().is_empty());
+        assert!(g.all_edges().is_empty());
+    }
+
+    #[test]
+    fn test_add_and_get_node() {
+        let mut g = Graph::new();
+        let node = make_node("测试角色", NodeCategory::Entity(EntityKind::Character));
+        let id = node.id;
+        g.add_node(node);
+        assert_eq!(g.all_nodes().len(), 1);
+        assert!(g.get_node(&id).is_some());
+        assert_eq!(g.get_node(&id).unwrap().name, "测试角色");
+    }
+
+    #[test]
+    fn test_remove_node_also_removes_edges() {
+        let mut g = Graph::new();
+        let a = make_node("A", NodeCategory::Event);
+        let b = make_node("B", NodeCategory::Event);
+        let a_id = a.id;
+        let b_id = b.id;
+        g.add_node(a);
+        g.add_node(b);
+        let edge = Edge::new(a_id, b_id, EdgeType::Sequence, "A → B");
+        g.add_edge(edge).unwrap();
+        assert_eq!(g.all_edges().len(), 1);
+
+        g.remove_node(&a_id);
+        assert!(g.get_node(&a_id).is_none());
+        assert_eq!(g.all_edges().len(), 0); // 关联边被清除
+    }
+
+    #[test]
+    fn test_add_edge_missing_source() {
+        let mut g = Graph::new();
+        let b = make_node("B", NodeCategory::Event);
+        let b_id = b.id;
+        g.add_node(b);
+        let edge = Edge::new(uuid::Uuid::new_v4(), b_id, EdgeType::RelatesTo, "");
+        match g.add_edge(edge) {
+            Err(GraphError::NodeNotFound(_)) => {},
+            other => panic!("期望 NodeNotFound，得到: {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_event_sequence_cycle_detection() {
+        let mut g = Graph::new();
+        let a = make_node("A", NodeCategory::Event);
+        let b = make_node("B", NodeCategory::Event);
+        let c = make_node("C", NodeCategory::Event);
+        let a_id = a.id;
+        let b_id = b.id;
+        let c_id = c.id;
+        g.add_node(a);
+        g.add_node(b);
+        g.add_node(c);
+
+        // A → B → C
+        g.add_edge(Edge::new(a_id, b_id, EdgeType::Sequence, "")).unwrap();
+        g.add_edge(Edge::new(b_id, c_id, EdgeType::Sequence, "")).unwrap();
+
+        // C → A 应该形成环
+        match g.add_edge(Edge::new(c_id, a_id, EdgeType::Sequence, "")) {
+            Err(GraphError::CycleDetected) => {},
+            other => panic!("期望 CycleDetected，得到: {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_topological_sort() {
+        let mut g = Graph::new();
+        let a = make_node("A", NodeCategory::Event);
+        let b = make_node("B", NodeCategory::Event);
+        let c = make_node("C", NodeCategory::Event);
+        let a_id = a.id;
+        let b_id = b.id;
+        let c_id = c.id;
+        g.add_node(a);
+        g.add_node(b);
+        g.add_node(c);
+
+        g.add_edge(Edge::new(a_id, b_id, EdgeType::Sequence, "")).unwrap();
+        g.add_edge(Edge::new(b_id, c_id, EdgeType::Sequence, "")).unwrap();
+
+        let sorted = g.topological_sort_events().unwrap();
+        assert_eq!(sorted.len(), 3);
+        // A 必须在 B 之前，B 必须在 C 之前
+        let pos = |id: &NodeId| sorted.iter().position(|x| x == id).unwrap();
+        assert!(pos(&a_id) < pos(&b_id));
+        assert!(pos(&b_id) < pos(&c_id));
+    }
+
+    #[test]
+    fn test_outgoing_and_incoming_edges() {
+        let mut g = Graph::new();
+        let a = make_node("A", NodeCategory::Event);
+        let b = make_node("B", NodeCategory::Event);
+        let a_id = a.id;
+        let b_id = b.id;
+        g.add_node(a);
+        g.add_node(b);
+        g.add_edge(Edge::new(a_id, b_id, EdgeType::Influences, "A influences B")).unwrap();
+
+        let out = g.outgoing_edges(&a_id);
+        assert_eq!(out.len(), 1);
+        assert_eq!(out[0].edge_type, EdgeType::Influences);
+
+        let inc = g.incoming_edges(&b_id);
+        assert_eq!(inc.len(), 1);
+        assert_eq!(inc[0].description, "A influences B");
+    }
+}

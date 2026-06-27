@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { Plus, Book, FileText, Sparkles } from '@lucide/vue'
+import { Plus, Book, Sparkles } from '@lucide/vue'
 import { useWorks, workStatusLabels, type WorkStatus } from '../composables/useWorks'
 
 const router = useRouter()

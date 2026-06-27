@@ -73,6 +73,7 @@ pub async fn open_work(app_handle: tauri::AppHandle, state: State<'_, AppState>,
         "title": ws.data.meta.title,
         "status": ws.data.meta.status,
         "completed_words": ws.data.meta.completed_words,
+        "interactions": ws.data.interactions,
     }))
 }
 

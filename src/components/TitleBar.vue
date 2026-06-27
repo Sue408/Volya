@@ -61,7 +61,7 @@ async function handleClose() {
 </script>
 
 <template>
-  <header class="titlebar">
+  <header class="titlebar" data-tauri-drag-region>
     <!-- 左侧 — 返回 / 图标 + 标题 -->
     <div class="titlebar-left">
       <button v-if="showBack" class="tb-btn" @click="goBack" title="返回">
@@ -74,7 +74,7 @@ async function handleClose() {
     </div>
 
     <!-- 中间 — 拖拽区 -->
-    <div class="titlebar-center" data-tauri-drag-region></div>
+    <div class="titlebar-center"></div>
 
     <!-- 右侧 — 主题切换 / 设置 / 窗口控制 -->
     <div class="titlebar-right">
@@ -119,7 +119,6 @@ async function handleClose() {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  -webkit-app-region: no-drag;
   min-width: 0;
 }
 
@@ -152,7 +151,6 @@ async function handleClose() {
 /* ─── 中间拖拽区 ─── */
 .titlebar-center {
   flex: 1;
-  -webkit-app-region: drag;
   min-width: 0;
 }
 
@@ -161,7 +159,6 @@ async function handleClose() {
   display: flex;
   align-items: center;
   gap: 2px;
-  -webkit-app-region: no-drag;
 }
 
 .tb-btn {
