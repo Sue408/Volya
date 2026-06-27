@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, nextTick, watch } from 'vue'
+import { ref, nextTick, watch, onUnmounted } from 'vue'
 import MessageBubble from './MessageBubble.vue'
 import ChatInput from './ChatInput.vue'
 import SettingsDialog from './SettingsDialog.vue'
@@ -23,9 +23,13 @@ const {
   setPermissionLevel,
   loadLlmConfig,
   saveLlmConfig,
+  cleanup,
 } = useAgent()
 
 const messagesContainer = ref<HTMLElement | null>(null)
+
+// 组件卸载时清理 Tauri 事件监听，避免热更新重复注册
+onUnmounted(() => cleanup())
 const showPermissionMenu = ref(false)
 const showSettings = ref(false)
 

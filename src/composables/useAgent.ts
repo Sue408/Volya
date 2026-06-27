@@ -74,9 +74,9 @@ export function useAgent() {
       }
     }).then(fn => unlisteners.push(fn))
 
-    // 块结束 → 清理映射
-    listen<{ id: string }>('agent:block_stop', () => {
-      // 映射保留以供后续清理，但可以忽略
+    // 块结束 → 清理 blockIndex，防止内存泄漏
+    listen<{ id: string }>('agent:block_stop', (event) => {
+      delete blockIndex.value[event.payload.id]
     }).then(fn => unlisteners.push(fn))
 
     // 工具调用事件（无流式，一次性）

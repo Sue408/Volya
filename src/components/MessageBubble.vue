@@ -43,8 +43,8 @@ function formatTime(date: Date): string {
           </svg>
           <span class="tool-name">{{ message.toolName || '工具调用' }}</span>
         </div>
-        <div class="tool-content"><!-- eslint-disable-next-line vue/no-v-html -->
-          <div v-if="message.content" v-html="message.content.replace(/```json\n?/g, '<code>').replace(/\n```/g, '</code>').replace(/\n/g, '<br>')"></div>
+        <div class="tool-content">
+          <pre v-if="message.content" class="tool-content-text">{{ message.content }}</pre>
         </div>
       </div>
     </template>
@@ -181,6 +181,15 @@ function formatTime(date: Date): string {
   color: var(--text-secondary);
   line-height: 1.5;
   font-family: var(--font-mono);
+}
+
+.tool-content-text {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
 }
 
 /* ─── 审批请求 ─── */
