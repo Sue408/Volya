@@ -1,9 +1,14 @@
 <script setup lang="ts">
-import ChatPanel from './components/ChatPanel.vue'
+import TitleBar from './components/TitleBar.vue'
 </script>
 
 <template>
-  <ChatPanel />
+  <div class="app-shell">
+    <TitleBar />
+    <main class="app-main">
+      <RouterView />
+    </main>
+  </div>
 </template>
 
 <style>
@@ -31,5 +36,17 @@ body {
 ::selection {
   background: var(--sage-200);
   color: var(--sage-900);
+}
+
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.app-main {
+  flex: 1;
+  overflow: hidden;
 }
 </style>

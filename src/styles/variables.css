@@ -1,7 +1,14 @@
 /* ============================================================
-   Volya — 主题配色系统
+   Volya — Design Token System (v0.1)
+   设计风格：Sunlit Studio · 向阳创作室
    主色调：鼠尾草绿 (Sage Green) 🍃
    点缀色：暖杏橙 (Warm Apricot) 🍊
+   字体：Newsreader (标题) + Outfit (正文)
+   ============================================================
+   使用规范：
+   - 组件中一律使用语义 Token（如 --bg-primary），
+     而非直接引用色阶 Token（如 --sage-50）
+   - 深色模式切换时只需更新映射，组件无需改动
    ============================================================ */
 
 :root {
@@ -17,7 +24,7 @@
   --sage-800: #36442f;
   --sage-900: #283623;
 
-  /* ─── 暖杏点缀色 ─── */
+  /* ─── 暖杏点缀色 🍊 ─── */
   --apricot-50:  #fdf6f0;
   --apricot-100: #fae8d6;
   --apricot-200: #f4ceac;
@@ -47,35 +54,39 @@
   --error:   #c94f4f;
   --info:    #5b8db8;
 
-  /* ─── 背景与前景 ─── */
-  --bg-primary:       var(--sage-50);
-  --bg-secondary:     #ffffff;
-  --bg-tertiary:      var(--sage-100);
-  --bg-hover:         var(--sage-100);
-  --bg-card:          #ffffff;
-  --bg-input:         #ffffff;
-  --bg-chat:          #ffffff;
+  /* ─── 背景 Token ─── */
+  --bg-primary:       var(--sage-50);     /* 最底层页面背景 */
+  --bg-secondary:     #ffffff;            /* 表面/卡片背景 */
+  --bg-tertiary:      var(--sage-100);    /* hover、次要背景 */
+  --bg-hover:         var(--sage-100);    /* 悬浮态背景 */
+  --bg-card:          #ffffff;            /* 卡片背景 */
+  --bg-input:         #ffffff;            /* 输入框背景 */
+  --bg-chat:          #ffffff;            /* 聊天区域背景 */
+  --bg-titlebar:      var(--sage-100);    /* 标题栏背景 */
 
-  --text-primary:     var(--neutral-900);
-  --text-secondary:   var(--neutral-600);
-  --text-tertiary:    var(--neutral-400);
-  --text-link:        var(--sage-600);
-  --text-on-color:    #ffffff;
+  /* ─── 文字 Token ─── */
+  --text-primary:     var(--neutral-900); /* 主要文字 */
+  --text-secondary:   var(--neutral-600); /* 次要文字 */
+  --text-tertiary:    var(--neutral-400); /* 辅助文字、占位符 */
+  --text-link:        var(--sage-600);    /* 链接文字 */
+  --text-on-color:    #ffffff;            /* 深色背景上的文字 */
 
-  --border-color:     var(--sage-200);
-  --border-light:     var(--sage-100);
-  --divider-color:    var(--sage-100);
+  /* ─── 边框 Token ─── */
+  --border-color:     var(--sage-200);    /* 标准边框 */
+  --border-light:     var(--sage-100);    /* 浅边框 */
+  --divider-color:    var(--sage-100);    /* 分割线 */
 
-  --accent-primary:   var(--sage-500);
-  --accent-secondary: var(--apricot-400);
-  --accent-hover:     var(--sage-600);
+  /* ─── 强调色 Token ─── */
+  --accent-primary:   var(--sage-500);    /* 主强调色 */
+  --accent-secondary: var(--apricot-400); /* 次强调色 🍊 */
+  --accent-hover:     var(--sage-600);    /* 强调色 hover */
 
   /* ─── 圆角 ─── */
-  --radius-sm:    6px;
-  --radius-md:    10px;
-  --radius-lg:    16px;
-  --radius-xl:    24px;
-  --radius-full:  9999px;
+  --radius-sm:    6px;      /* 小元素、标签 */
+  --radius-md:    10px;     /* 按钮、输入框 */
+  --radius-lg:    16px;     /* 卡片、消息气泡 */
+  --radius-xl:    24px;     /* 弹窗、大卡片 */
+  --radius-full:  9999px;   /* 圆形、胶囊 */
 
   /* ─── 阴影 ─── */
   --shadow-sm:    0 1px 2px rgba(40, 54, 35, 0.06);
@@ -84,16 +95,25 @@
   --shadow-focus: 0 0 0 3px rgba(86, 107, 76, 0.2);
 
   /* ─── 字体 ─── */
-  --font-sans:    'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-mono:    'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
-  --font-size-xs:    12px;
-  --font-size-sm:    13px;
-  --font-size-base:  14px;
-  --font-size-lg:    16px;
-  --font-size-xl:    20px;
-  --font-size-2xl:   24px;
+  --font-display: 'Newsreader', Georgia, serif;              /* 标题/展示 */
+  --font-sans:    'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;  /* 正文/UI */
+  --font-mono:    'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;      /* 代码 */
 
-  /* ─── 间距 ─── */
+  /* ─── 字号 ─── */
+  --font-size-xs:    12px;   /* 辅助信息、时间戳 */
+  --font-size-sm:    13px;   /* 次要文字、元数据 */
+  --font-size-base:  14px;   /* 正文、消息内容（默认） */
+  --font-size-lg:    16px;   /* 重要文字、小标题 */
+  --font-size-xl:    20px;   /* 面板标题 */
+  --font-size-2xl:   24px;   /* 页面大标题 */
+  --font-size-3xl:   32px;   /* 展示用 */
+
+  /* ─── 行高 ─── */
+  --leading-tight:   1.25;   /* 标题 */
+  --leading-normal:  1.5;    /* 正文 */
+  --leading-relaxed: 1.75;   /* 长文阅读 */
+
+  /* ─── 间距（4px 网格） ─── */
   --space-1:  4px;
   --space-2:  8px;
   --space-3:  12px;
@@ -110,7 +130,7 @@
   --transition-slow:   400ms ease;
 }
 
-/* ─── 深色模式（后续可选） ─── */
+/* ─── 深色模式 ─── */
 @media (prefers-color-scheme: dark) {
   :root {
     --bg-primary:       #1a2117;
@@ -120,6 +140,7 @@
     --bg-card:          #222b1e;
     --bg-input:         #2a3525;
     --bg-chat:          #1a2117;
+    --bg-titlebar:      #222b1e;
 
     --text-primary:     #e8ede3;
     --text-secondary:   #b3c2a8;

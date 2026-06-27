@@ -1,5 +1,6 @@
 use crate::agent::session::{SessionLoop, SessionState};
 use crate::workspace::data::WorkData;
+use crate::workspace::manager::WorkManager;
 use tauri::State;
 use tokio::sync::Mutex;
 
@@ -7,9 +8,10 @@ use tokio::sync::Mutex;
 /// Tauri Commands — 前端可以通过 invoke() 调用的函数
 /// ============================================================
 
-/// 全局会话状态
+/// 全局状态
 pub struct AppState {
     pub session: Mutex<Option<SessionLoop>>,
+    pub manager: Mutex<WorkManager>,
 }
 
 /// 创建新作品并初始化会话
@@ -46,6 +48,7 @@ pub async fn send_message(
     state: State<'_, AppState>,
     message: String,
 ) -> Result<(), String> {
+    let mut manager_lock = state.manager.lock().await;
     let mut session_lock = state.session.lock().await;
     let session = session_lock.as_mut().ok_or("会话未初始化")?;
 
@@ -54,7 +57,7 @@ pub async fn send_message(
     }
 
     session.state = SessionState::Processing;
-    session.agent.process_message(&message, &app_handle).await;
+    session.agent.process_message(&message, &app_handle, &mut *manager_lock).await;
 
     // 如果 agent 有待审批项，保持 awaiting_approval 状态
     if !session.agent.pending_approvals.is_empty() {
@@ -92,7 +95,8 @@ pub async fn handle_approval(
     let decisions = vec![(tool_use_id, approved)];
 
     // 继续 LLM 循环
-    session.agent.continue_after_approval(decisions, &app_handle).await;
+    let mut manager_lock = state.manager.lock().await;
+    session.agent.continue_after_approval(decisions, &app_handle, &mut *manager_lock).await;
 
     // continue_after_approval 内部会管理状态, 但需要同步 session.state
     if session.agent.pending_approvals.is_empty() {

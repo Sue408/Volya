@@ -12,7 +12,7 @@
 | [03-agent-system.md](./03-agent-system.md) | Agent 系统：NovelAgent/Crew/Gate/Tool |
 | [04-llm-integration.md](./04-llm-integration.md) | LLM 集成：Anthropic API/配置管理/流式通信 |
 | [05-ipc-layer.md](./05-ipc-layer.md) | IPC 层：Tauri Commands/事件系统 |
-| [06-frontend.md](./06-frontend.md) | 前端架构：组件树/状态管理/主题系统 |
+| [06-frontend.md](./06-frontend.md) | **🆕 前端设计系统：UI/UX 规范、视觉身份、组件设计、页面布局、动效体系** |
 | [07-development.md](./07-development.md) | 开发指南：环境搭建/构建命令/代码规范 |
 
 ## 项目概览

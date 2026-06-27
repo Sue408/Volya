@@ -80,7 +80,7 @@ pub struct NovelAgent {
 impl NovelAgent {
     pub fn new(work_data: WorkData, permission_level: u8) -> Self {
         let gate = Gate::new(crate::agent::gate::PermissionLevel::from_u8(permission_level));
-        let tools = crate::agent::tool::get_mock_tools();
+        let tools = crate::agent::tool::get_real_tools();
         Self {
             state: AgentState::Idle,
             tools,
@@ -172,6 +172,7 @@ impl NovelAgent {
         &mut self,
         user_message: &str,
         app: &tauri::AppHandle,
+        manager: &mut crate::workspace::manager::WorkManager,
     ) {
         let config = GlobalConfig::load();
         if !config.is_valid() {
@@ -240,7 +241,7 @@ impl NovelAgent {
                         self.state = AgentState::CallingTool {
                             tool_name: tool_name.clone(),
                         };
-                        let result = self.execute_tool(tool_name, tool_args.clone()).await;
+                        let result = self.execute_tool(tool_name, tool_args.clone(), manager).await;
                         Self::emit(app, AgentEvent::ToolResult {
                             tool_name: tool_name.clone(),
                             result: result.data.clone(),
@@ -305,6 +306,7 @@ impl NovelAgent {
         &mut self,
         decisions: Vec<(String, bool)>, // (tool_use_id, approved)
         app: &tauri::AppHandle,
+        manager: &mut crate::workspace::manager::WorkManager,
     ) {
         let config = GlobalConfig::load();
         if !config.is_valid() {
@@ -323,7 +325,7 @@ impl NovelAgent {
         for (tool_use_id, approved) in &decisions {
             if let Some(item) = self.pending_approvals.iter().find(|p| p.tool_use_id == *tool_use_id) {
                 if *approved {
-                    let result = self.execute_tool(&item.tool_name, item.tool_args.clone()).await;
+                    let result = self.execute_tool(&item.tool_name, item.tool_args.clone(), manager).await;
                     Self::emit(app, AgentEvent::ToolResult {
                         tool_name: item.tool_name.clone(),
                         result: result.data.clone(),
@@ -395,7 +397,7 @@ impl NovelAgent {
                 let sensitivity = Gate::classify_tool(tool_name);
                 match self.gate.check(tool_name, sensitivity) {
                     GateDecision::Allowed => {
-                        let r = self.execute_tool(tool_name, tool_args.clone()).await;
+                        let r = self.execute_tool(tool_name, tool_args.clone(), manager).await;
                         Self::emit(app, AgentEvent::ToolResult {
                             tool_name: tool_name.clone(),
                             result: r.data.clone(),
@@ -453,10 +455,15 @@ impl NovelAgent {
         Self::emit(app, AgentEvent::Done);
     }
 
-    pub async fn execute_tool(&self, tool_name: &str, args: serde_json::Value) -> ToolResult {
+    pub async fn execute_tool(
+        &self,
+        tool_name: &str,
+        args: serde_json::Value,
+        manager: &mut crate::workspace::manager::WorkManager,
+    ) -> ToolResult {
         for tool in &self.tools {
             if tool.name() == tool_name {
-                return tool.execute(args).await;
+                return tool.execute(args, manager).await;
             }
         }
         ToolResult {

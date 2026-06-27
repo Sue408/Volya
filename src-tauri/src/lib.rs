@@ -4,13 +4,21 @@ mod ipc;
 mod workspace;
 
 use ipc::commands::AppState;
+use workspace::manager::WorkManager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // 默认作品目录：~/.volya/works/
+    let base_dir = dirs::config_dir()
+        .unwrap_or_else(|| std::path::PathBuf::from("."))
+        .join("volya")
+        .join("works");
+
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .manage(AppState {
             session: tokio::sync::Mutex::new(None),
+            manager: tokio::sync::Mutex::new(WorkManager::new(base_dir)),
         })
         .invoke_handler(tauri::generate_handler![
             ipc::commands::create_work,

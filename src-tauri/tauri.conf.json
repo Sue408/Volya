@@ -12,9 +12,13 @@
   "app": {
     "windows": [
       {
-        "title": "volya",
-        "width": 800,
-        "height": 600
+        "title": "Volya",
+        "width": 1100,
+        "height": 720,
+        "decorations": false,
+        "center": true,
+        "minWidth": 800,
+        "minHeight": 500
       }
     ],
     "security": {
