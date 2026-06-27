@@ -62,6 +62,21 @@ export function useWorks() {
   }
 
   /**
+   * 删除作品
+   */
+  async function deleteWork(id: string): Promise<boolean> {
+    try {
+      await invoke('delete_work', { id })
+      // 从列表中移除
+      works.value = works.value.filter(w => w.id !== id)
+      return true
+    } catch (e) {
+      console.error('删除作品失败:', e)
+      return false
+    }
+  }
+
+  /**
    * 格式化相对时间
    */
   function timeAgo(isoStr: string): string {
@@ -85,6 +100,7 @@ export function useWorks() {
     error,
     listWorks,
     createWork,
+    deleteWork,
     timeAgo,
   }
 }

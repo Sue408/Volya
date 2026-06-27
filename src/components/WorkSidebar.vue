@@ -45,8 +45,7 @@ const emit = defineEmits<{
   display: flex;
   flex-direction: column;
   width: 180px;
-  border-right: 1px solid var(--border-light);
-  background: var(--bg-secondary);
+  background: var(--bg-primary);
   transition: width var(--transition-normal);
   overflow: hidden;
   flex-shrink: 0;
@@ -61,7 +60,6 @@ const emit = defineEmits<{
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-3) var(--space-2);
-  border-bottom: 1px solid var(--border-light);
   min-height: 40px;
 }
 

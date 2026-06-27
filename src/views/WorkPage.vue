@@ -100,6 +100,7 @@ watch(() => route.params.id, (newId) => {
   display: flex;
   height: 100%;
   overflow: hidden;
+  background: var(--bg-primary);
 }
 
 .work-main {
@@ -107,6 +108,11 @@ watch(() => route.params.id, (newId) => {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  background: var(--bg-chat);
+  margin: var(--space-2);
+  margin-left: 0;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-light);
 }
 
 /* ─── 加载 ─── */

@@ -31,6 +31,10 @@ html, body, #app {
   overflow: hidden;
 }
 
+html {
+  font-size: 16px;  /* rem 基准 */
+}
+
 body {
   font-family: var(--font-sans);
   font-size: var(--font-size-base);

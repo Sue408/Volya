@@ -1,21 +1,22 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { Plus, Book, Sparkles } from '@lucide/vue'
-import { useWorks, workStatusLabels, type WorkStatus } from '../composables/useWorks'
+import { Plus, Trash2 } from '@lucide/vue'
+import { useWorks } from '../composables/useWorks'
 
 const router = useRouter()
-const { works, loading, listWorks, createWork, timeAgo } = useWorks()
+const { works, loading, listWorks, createWork, deleteWork } = useWorks()
 
 const creating = ref(false)
 const showNewDialog = ref(false)
 const newTitle = ref('')
 
-onMounted(() => {
-  listWorks()
-})
+const deletingId = ref<string | null>(null)
+const showDeleteConfirm = ref(false)
+const deleteTarget = ref<{ id: string; title: string } | null>(null)
 
-/** 新建作品 */
+onMounted(() => { listWorks() })
+
 async function handleCreate() {
   const title = newTitle.value.trim()
   if (!title) return
@@ -24,73 +25,104 @@ async function handleCreate() {
   creating.value = false
   showNewDialog.value = false
   newTitle.value = ''
-  if (id) {
-    router.push(`/works/${id}`)
-  }
+  if (id) router.push(`/works/${id}`)
 }
 
-/** 点击作品卡片 */
-function openWork(id: string) {
-  router.push(`/works/${id}`)
+function openWork(id: string) { router.push(`/works/${id}`) }
+
+function confirmDelete(work: { id: string; title: string }) {
+  deleteTarget.value = work
+  showDeleteConfirm.value = true
+}
+
+async function handleDelete() {
+  if (!deleteTarget.value) return
+  deletingId.value = deleteTarget.value.id
+  await deleteWork(deleteTarget.value.id)
+  deletingId.value = null
+  showDeleteConfirm.value = false
+  deleteTarget.value = null
+}
+
+function statusLabel(status: string): string {
+  const map: Record<string, string> = { Draft: '草稿', InProgress: '进行中', Completed: '已完成' }
+  return map[status] || status
 }
 </script>
 
 <template>
   <div class="works-list">
-    <!-- 问候语 -->
-    <div class="greeting">
-      <h1 class="greeting-title">✦ 你好呀，今天想创作什么故事？</h1>
-      <p class="greeting-desc" v-if="works.length > 0">
-        你有 {{ works.length }} 个作品，继续你的创作之旅吧 🍊
-      </p>
-      <p class="greeting-desc" v-else>
-        还没有作品，开始你的第一部小说吧 🍊
-      </p>
+    <!-- 上区：标题 + 副标题 -->
+    <div class="top-section">
+      <h1 class="page-title">Volya</h1>
+      <p class="page-subtitle">落笔生花 · 万物成书</p>
     </div>
 
-    <!-- 加载中 -->
-    <div v-if="loading" class="loading-state">
-      <span class="loading-dot"></span>
-      <span>加载中...</span>
-    </div>
+    <!-- 下区：控制栏 + 作品列表（占剩余高度） -->
+    <div class="content-section">
+      <!-- Control bar -->
+      <div class="control-bar">
+        <span class="control-label">我的作品</span>
+        <button class="btn-new" @click="showNewDialog = true">
+          <span class="btn-new-text">新建作品</span>
+          <Plus :size="16" color="white" class="btn-new-icon" />
+        </button>
+      </div>
 
-    <!-- 作品网格 -->
-    <div v-else class="works-grid">
-      <div
-        v-for="work in works"
-        :key="work.id"
-        class="work-card"
-        @click="openWork(work.id)"
-      >
-        <div class="work-card-cover" :class="`cover-${work.status.toLowerCase()}`">
-          <Book :size="24" class="work-card-cover-icon" />
+      <!-- Works list -->
+      <div v-if="!loading" class="works-list-vertical">
+        <div v-if="works.length === 0" class="works-placeholder">
+          <div class="placeholder-line"></div>
+          <div class="placeholder-line short"></div>
+          <div class="placeholder-line"></div>
         </div>
-        <div class="work-card-body">
-          <h3 class="work-card-title">{{ work.title }}</h3>
-          <div class="work-card-meta">
-            <span class="work-card-status" :class="`status-${work.status.toLowerCase()}`">
-              {{ workStatusLabels[work.status as WorkStatus]?.icon }}
-              {{ workStatusLabels[work.status as WorkStatus]?.label }}
-            </span>
-            <span class="work-card-words">{{ work.completed_words.toLocaleString() }} 字</span>
+
+        <div
+          v-for="work in works"
+          :key="work.id"
+          class="work-row"
+          @click="openWork(work.id)"
+        >
+          <div class="row-left">
+            <h3 class="row-title">{{ work.title }}</h3>
+            <span class="row-words">{{ work.completed_words.toLocaleString() }} 字</span>
           </div>
-          <div class="work-card-time">{{ timeAgo(work.updated_at) }}</div>
+          <div class="row-right">
+            <span class="row-status">{{ statusLabel(work.status) }}</span>
+            <button
+              class="row-delete"
+              :class="{ loading: deletingId === work.id }"
+              @click.stop="confirmDelete(work)"
+              title="删除作品"
+            >
+              <Trash2 :size="14" />
+            </button>
+            <span class="row-arrow">&rarr;</span>
+          </div>
         </div>
       </div>
 
-      <!-- 新建作品卡片 -->
-      <div class="new-work-card" @click="showNewDialog = true">
-        <Plus :size="28" class="new-work-icon" />
-        <span class="new-work-label">新建作品</span>
-        <span class="new-work-hint">或拖拽文件夹到此处</span>
+      <!-- 加载 -->
+      <div v-if="loading" class="loading-state">
+        <span class="loading-dot"></span>
       </div>
     </div>
 
-    <!-- Doro 小尾巴 -->
-    <div class="doro-footer">
-      <Sparkles :size="14" />
-      <span>Doro 在陪着你哦~</span>
-    </div>
+    <!-- 删除确认对话框 -->
+    <Teleport to="body">
+      <div v-if="showDeleteConfirm" class="dialog-overlay" @click.self="showDeleteConfirm = false">
+        <div class="dialog-card dialog-warn">
+          <h2 class="dialog-title">删除作品</h2>
+          <p class="dialog-desc">确定要删除「{{ deleteTarget?.title }}」吗？此操作不可撤销。</p>
+          <div class="dialog-actions">
+            <button class="btn btn-ghost" @click="showDeleteConfirm = false">取消</button>
+            <button class="btn btn-danger" @click="handleDelete">
+              {{ deletingId ? '删除中...' : '删除' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
 
     <!-- 新建作品对话框 -->
     <Teleport to="body">
@@ -126,43 +158,235 @@ function openWork(id: string) {
   flex-direction: column;
   align-items: center;
   height: 100%;
-  padding: var(--space-10) var(--space-6);
+  padding: 5vh 10vw;
   overflow-y: auto;
 }
 
-/* ─── 问候 ─── */
-.greeting {
-  text-align: center;
-  margin-bottom: var(--space-8);
+/* ─── 上区：标题 ─── */
+.top-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 4vh;
+  margin-bottom: 5vh;
 }
 
-.greeting-title {
-  font-family: var(--font-display);
-  font-size: var(--font-size-2xl);
+.page-title {
+  font-family: var(--font-logo);
+  font-size: var(--font-size-5xl);
   font-weight: 600;
   color: var(--text-primary);
-  margin-bottom: var(--space-2);
-  letter-spacing: -0.01em;
+  letter-spacing: 0.06em;
+  line-height: 1.1;
+  margin-bottom: var(--space-3);
 }
 
-.greeting-desc {
-  font-size: var(--font-size-base);
+.page-subtitle {
+  font-family: var(--font-display);
+  font-size: var(--font-size-lg);
+  color: var(--text-tertiary);
+}
+
+/* ─── 下区：内容 ─── */
+.content-section {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 520px;
+  flex: 1;
+}
+
+/* ─── 控制栏 ─── */
+.control-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: var(--space-3);
+  margin-bottom: var(--space-4);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.control-label {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
   color: var(--text-secondary);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* ─── 新建按钮：+ 固定右侧，文字向左展开 ─── */
+.btn-new {
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: center;
+  gap: 0;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-full);
+  background: var(--accent-primary);
+  color: var(--text-on-color);
+  cursor: pointer;
+  overflow: hidden;
+  transition: width 0.25s ease, background var(--transition-fast);
+  white-space: nowrap;
+  flex-shrink: 0;
+  justify-content: flex-end;
+}
+
+.btn-new:hover {
+  width: 130px;
+  gap: var(--space-1);
+  padding-left: var(--space-4);
+  background: var(--accent-hover);
+}
+
+.btn-new-icon {
+  flex-shrink: 0;
+}
+
+.btn-new-text {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  opacity: 0;
+  transition: opacity 0.15s ease 0.1s;
+}
+
+.btn-new:hover .btn-new-text {
+  opacity: 1;
+}
+
+/* ─── 纵向作品列表 ─── */
+.works-list-vertical {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.work-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.work-row:hover {
+  background: var(--bg-tertiary);
+}
+
+.work-row:active {
+  transform: scale(0.99);
+}
+
+.row-delete {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  opacity: 0;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.work-row:hover .row-delete {
+  opacity: 1;
+}
+
+.row-delete:hover {
+  background: var(--error);
+  color: white;
+}
+
+.row-delete.loading {
+  opacity: 1;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.row-left {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.row-title {
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.row-words {
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+
+.row-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-shrink: 0;
+}
+
+.row-status {
+  font-size: var(--font-size-xs);
+  color: var(--accent-primary);
+}
+
+.row-arrow {
+  font-size: var(--font-size-lg);
+  color: var(--text-tertiary);
+  transition: transform var(--transition-fast);
+}
+
+.work-row:hover .row-arrow {
+  transform: translateX(4px);
+  color: var(--accent-primary);
+}
+
+/* ─── 占位符 ─── */
+.works-placeholder {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-8) var(--space-4);
+}
+
+.placeholder-line {
+  height: 16px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+}
+
+.placeholder-line.short {
+  width: 60%;
 }
 
 /* ─── 加载 ─── */
 .loading-state {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  color: var(--text-tertiary);
-  font-size: var(--font-size-sm);
-  padding: var(--space-8) 0;
+  justify-content: center;
+  flex: 1;
 }
 
 .loading-dot {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background: var(--accent-primary);
   animation: pulse 1.5s ease-in-out infinite;
@@ -173,157 +397,54 @@ function openWork(id: string) {
   50% { opacity: 0.3; }
 }
 
-/* ─── 作品网格 ─── */
-.works-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: var(--space-4);
-  width: 100%;
-  max-width: 720px;
-}
-
-/* ─── 作品卡片 ─── */
-.work-card {
-  background: var(--bg-card);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  cursor: pointer;
-  overflow: hidden;
-  transition: all var(--transition-fast);
-  border: 1px solid var(--border-light);
-}
-
-.work-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-  border-color: var(--border-color);
-}
-
-.work-card-cover {
-  height: 80px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--bg-tertiary);
-}
-
-.work-card-cover.cover-draft {
-  background: linear-gradient(135deg, var(--sage-100), var(--sage-200));
-}
-
-.work-card-cover.cover-inprogress {
-  background: linear-gradient(135deg, var(--sage-200), var(--sage-300));
-}
-
-.work-card-cover.cover-completed {
-  background: linear-gradient(135deg, var(--apricot-100), var(--apricot-200));
-}
-
-.work-card-emoji {
-  font-size: 28px;
-}
-
-.work-card-body {
-  padding: var(--space-3);
-}
-
-.work-card-title {
-  font-family: var(--font-display);
+/* ─── 对话框通用 ─── */
+.dialog-desc {
   font-size: var(--font-size-base);
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: var(--space-2);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-5);
+  line-height: 1.5;
 }
 
-.work-card-meta {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin-bottom: var(--space-1);
+.dialog-warn {
+  border-top: 3px solid var(--error);
 }
 
-.work-card-status {
-  font-size: var(--font-size-xs);
+.btn-ghost {
+  background: transparent;
+  color: var(--text-tertiary);
+  padding: var(--space-2) var(--space-5);
+  border: none;
+  border-radius: var(--radius-md);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.btn-ghost:hover {
   color: var(--text-secondary);
 }
 
-.work-card-status.status-inprogress {
-  color: var(--accent-primary);
-}
-
-.work-card-status.status-completed {
-  color: var(--success);
-}
-
-.work-card-words {
-  font-size: var(--font-size-xs);
-  color: var(--text-tertiary);
-}
-
-.work-card-time {
-  font-size: var(--font-size-xs);
-  color: var(--text-tertiary);
-}
-
-/* ─── 新建卡片 ─── */
-.new-work-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
-  height: 100%;
-  min-height: 180px;
-  border: 2px dashed var(--border-color);
-  border-radius: var(--radius-lg);
-  background: transparent;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  color: var(--text-tertiary);
-}
-
-.new-work-card:hover {
-  border-color: var(--accent-primary);
-  color: var(--accent-primary);
-  background: var(--bg-tertiary);
-}
-
-.new-work-icon {
-  opacity: 0.6;
-}
-
-.new-work-label {
-  font-size: var(--font-size-base);
-  font-weight: 600;
-}
-
-.new-work-hint {
-  font-size: var(--font-size-xs);
-  opacity: 0.6;
-}
-
-/* ─── Doro ─── */
-.doro-footer {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
-  margin-top: auto;
-  padding-top: var(--space-8);
+.btn-danger {
+  background: var(--error);
+  color: white;
+  padding: var(--space-2) var(--space-5);
+  border: none;
+  border-radius: var(--radius-md);
+  font-family: var(--font-sans);
   font-size: var(--font-size-sm);
-  color: var(--text-tertiary);
-  opacity: 0.6;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity var(--transition-fast);
 }
 
-.work-card-cover-icon {
-  color: var(--accent-primary);
-  opacity: 0.6;
+.btn-danger:hover {
+  opacity: 0.9;
 }
 
-/* ─── 新建对话框 ─── */
+/* ===========================================
+   新建对话框
+   =========================================== */
 .dialog-overlay {
   position: fixed;
   inset: 0;
@@ -345,7 +466,7 @@ function openWork(id: string) {
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-lg);
   padding: var(--space-6);
-  width: 380px;
+  width: 360px;
   max-width: 90vw;
   animation: slideUp 0.25s ease;
 }
@@ -357,7 +478,7 @@ function openWork(id: string) {
 
 .dialog-title {
   font-family: var(--font-display);
-  font-size: var(--font-size-xl);
+  font-size: var(--font-size-lg);
   font-weight: 600;
   color: var(--text-primary);
   margin-bottom: var(--space-4);

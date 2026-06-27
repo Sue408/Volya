@@ -147,7 +147,7 @@ impl WorkManager {
         Ok(())
     }
 
-    // ─── 列作 ───
+    // ─── 列作 & 删除 ───
 
     /// 列出所有已有作品
     pub async fn list_works(&self) -> Result<Vec<WorkSummary>, ManagerError> {
@@ -169,9 +169,23 @@ impl WorkManager {
                 }
             }
         }
-        // 按更新时间降序排列
         summaries.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
         Ok(summaries)
+    }
+
+    /// 删除作品：如果是当前作品先卸载，然后删除整个作品文件夹
+    pub async fn delete(&mut self, id: &str) -> Result<(), ManagerError> {
+        // 如果是当前打开的作品，先卸载
+        if let Some(ref ws) = self.current {
+            if ws.id == id {
+                self.unload_current().await?;
+            }
+        }
+        let dir = self.storage.work_dir(id);
+        if dir.exists() {
+            tokio::fs::remove_dir_all(&dir).await.map_err(ManagerError::Io)?;
+        }
+        Ok(())
     }
 
     // ─── 工具方法 ───
@@ -196,6 +210,8 @@ impl WorkManager {
 pub enum ManagerError {
     #[error("存储错误: {0}")]
     Storage(#[from] crate::workspace::storage::StorageError),
+    #[error("IO 错误: {0}")]
+    Io(#[from] std::io::Error),
     #[error("作品不存在: {0}")]
     NotFound(String),
 }
@@ -339,5 +355,26 @@ mod tests {
             manager.current().unwrap().data.meta.genre.as_deref(),
             Some("科幻")
         );
+    }
+
+    #[tokio::test]
+    async fn test_delete_work() {
+        let mut manager = setup().await;
+        let id = { let ws = manager.create("待删除").await.unwrap(); ws.id.clone() };
+        assert!(manager.list_works().await.unwrap().len() == 1);
+
+        manager.delete(&id).await.unwrap();
+        assert!(manager.list_works().await.unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_delete_current_work() {
+        let mut manager = setup().await;
+        let id = { let ws = manager.create("当前作品").await.unwrap(); ws.id.clone() };
+        assert!(manager.has_current());
+
+        manager.delete(&id).await.unwrap();
+        assert!(!manager.has_current());
+        assert!(manager.list_works().await.unwrap().is_empty());
     }
 }

@@ -1,195 +1,91 @@
 /* ============================================================
-   Volya — Design Token System (v0.2)
-   设计风格：Sunlit Studio
-   配色灵感：Claude Desktop (暖奶油白 + 暖灰)
-   点缀色：鼠尾草绿 (Sage) + 暖杏橙 (Apricot)
-   字体：Newsreader (标题) + Outfit (正文)
-   ============================================================
-   使用规范：
-   - 组件中一律使用语义 Token，而非直接引用色阶值
-   - 主题通过 [data-theme="dark"] / [data-theme="light"] 切换
-   - 未设置 data-theme 时跟随系统 prefers-color-scheme
+   Volya — Design Token System (v0.3)
+   背景色：固定暖中性色（不随主题色变化）
+   强调色：由 useThemeColor.ts 动态注入 --coral-* 色阶
+   强调 Token：--accent-primary 等由 JS 根据主色动态计算
    ============================================================ */
 
-/* ===========================================
-   1. 基础色阶 & 静态 Token (跨主题共享)
-   =========================================== */
 :root {
-  /* 鼠尾草绿 */
-  --sage-50:  #f6f8f4;
-  --sage-100: #e8ede3;
-  --sage-200: #d1dbca;
-  --sage-300: #b3c2a8;
-  --sage-400: #8a9f7b;
-  --sage-500: #6c8360;
-  --sage-600: #566b4c;
-  --sage-700: #43543b;
-  --sage-800: #36442f;
-  --sage-900: #283623;
+  /* ─── 圆角 ─── */
+  --radius-sm:6px; --radius-md:10px; --radius-lg:16px; --radius-xl:24px; --radius-full:9999px;
 
-  /* 暖杏橙 */
-  --apricot-50:  #fdf6f0;
-  --apricot-100: #fae8d6;
-  --apricot-200: #f4ceac;
-  --apricot-300: #ecae7d;
-  --apricot-400: #e58f53;
-  --apricot-500: #de7533;
-  --apricot-600: #c85d1e;
-  --apricot-700: #a7481a;
-  --apricot-800: #883b1b;
-  --apricot-900: #6e3118;
+  /* ─── 字体 ─── */
+  --font-logo:'Fraunces',Georgia,serif;
+  --font-display:'Newsreader',Georgia,serif;
+  --font-sans:'Outfit','Noto Sans SC',-apple-system,BlinkMacSystemFont,sans-serif;
+  --font-mono:Menlo,Consolas,monospace;
 
-  /* 语义色 */
-  --success: #5a9e6f;
-  --warning: #d4a556;
-  --error:   #c94f4f;
-  --info:    #5b8db8;
+  /* ─── 字号 ─── */
+  --font-size-xs:0.8125rem; --font-size-sm:0.875rem; --font-size-base:0.9375rem;
+  --font-size-lg:1.125rem; --font-size-xl:1.375rem; --font-size-2xl:1.75rem;
+  --font-size-3xl:2.25rem; --font-size-4xl:3rem; --font-size-5xl:3.75rem;
 
-  /* 圆角 */
-  --radius-sm:    6px;
-  --radius-md:    10px;
-  --radius-lg:    16px;
-  --radius-xl:    24px;
-  --radius-full:  9999px;
+  /* ─── 行高/间距/动画 ─── */
+  --leading-tight:1.25; --leading-normal:1.5; --leading-relaxed:1.75;
+  --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px;
+  --space-5:20px; --space-6:24px; --space-8:32px; --space-10:40px; --space-12:48px;
+  --transition-fast:150ms ease; --transition-normal:250ms ease; --transition-slow:400ms ease;
 
-  /* 字体 */
-  --font-display: 'Newsreader', Georgia, serif;
-  --font-sans:    'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-mono:    'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+  /* ─── 固定语义色 ─── */
+  --success:#5a9e6f; --warning:#d4a556; --error:#c94f4f; --info:#5b8db8;
 
-  /* 字号 */
-  --font-size-xs:    12px;
-  --font-size-sm:    13px;
-  --font-size-base:  14px;
-  --font-size-lg:    16px;
-  --font-size-xl:    20px;
-  --font-size-2xl:   24px;
-  --font-size-3xl:   32px;
+  /* ═══ Light 主题 — 固定暖中性色 ═══ */
+  --bg-primary:#F4F3EE; --bg-secondary:#FFFFFF; --bg-tertiary:#EEEDE8;
+  --bg-hover:#EEEDE8;   --bg-card:#FFFFFF;      --bg-input:#FFFFFF;
+  --bg-chat:#FFFFFF;    --bg-titlebar:#F4F3EE;
 
-  /* 行高 */
-  --leading-tight:   1.25;
-  --leading-normal:  1.5;
-  --leading-relaxed: 1.75;
+  --text-primary:#1C1B1A; --text-secondary:#6F6D66; --text-tertiary:#A5A29A;
+  --text-on-color:#FFFFFF;
 
-  /* 间距 (4px 网格) */
-  --space-1:  4px;
-  --space-2:  8px;
-  --space-3:  12px;
-  --space-4:  16px;
-  --space-5:  20px;
-  --space-6:  24px;
-  --space-8:  32px;
-  --space-10: 40px;
-  --space-12: 48px;
+  --border-color:#E3E1DC; --border-light:#EEEDE8; --divider-color:#E8E6E0;
 
-  /* 动画时长 */
-  --transition-fast:   150ms ease;
-  --transition-normal: 250ms ease;
-  --transition-slow:   400ms ease;
+  --shadow-sm:0 1px 2px rgba(28,27,26,0.05); --shadow-md:0 4px 12px rgba(28,27,26,0.07);
+  --shadow-lg:0 8px 30px rgba(28,27,26,0.10);
 
-  /* ─── Light 主题语义 Token (默认) ─── */
-  --bg-primary:       #F4F3EE;
-  --bg-secondary:     #FFFFFF;
-  --bg-tertiary:      #EEEDE8;
-  --bg-hover:         #EEEDE8;
-  --bg-card:          #FFFFFF;
-  --bg-input:         #FFFFFF;
-  --bg-chat:          #FFFFFF;
-  --bg-titlebar:      #F4F3EE;
-
-  --text-primary:     #1C1B1A;
-  --text-secondary:   #6F6D66;
-  --text-tertiary:    #A5A29A;
-  --text-link:        #566b4c;
-  --text-on-color:    #FFFFFF;
-  --text-on-accent:   #4A3F35;
-
-  --border-color:     #E3E1DC;
-  --border-light:     #EEEDE8;
-  --divider-color:    #E8E6E0;
-
-  --accent-primary:   #6c8360;
-  --accent-secondary: #e58f53;
-  --accent-hover:     #566b4c;
-
-  --shadow-sm:    0 1px 2px rgba(28, 27, 26, 0.05);
-  --shadow-md:    0 4px 12px rgba(28, 27, 26, 0.07);
-  --shadow-lg:    0 8px 30px rgba(28, 27, 26, 0.10);
-  --shadow-focus: 0 0 0 3px rgba(108, 131, 96, 0.20);
+  /* ═══ 强调色（默认珊瑚橙，会被 JS 覆盖） ═══ */
+  --accent-primary:#BF7B5A; --accent-secondary:#D4946E; --accent-hover:#A86444;
+  --text-link:#BF7B5A; --text-on-accent:#FFFFFF;
+  --shadow-focus:0 0 0 3px rgba(191,123,90,0.20);
 }
 
-/* ===========================================
-   2. Dark 主题
-   — 深暖灰
-   =========================================== */
+/* ═══ Dark 主题 ═══ */
 [data-theme="dark"] {
-  /* ── 背景 ── */
-  --bg-primary:       #1C1B1A;
-  --bg-secondary:     #262522;
-  --bg-tertiary:      #302F2B;
-  --bg-hover:         #302F2B;
-  --bg-card:          #262522;
-  --bg-input:         #302F2B;
-  --bg-chat:          #1C1B1A;
-  --bg-titlebar:      #1C1B1A;
+  --bg-primary:#1C1B1A; --bg-secondary:#262522; --bg-tertiary:#302F2B;
+  --bg-hover:#302F2B;   --bg-card:#262522;      --bg-input:#302F2B;
+  --bg-chat:#1C1B1A;    --bg-titlebar:#1C1B1A;
 
-  /* ── 文字 ── */
-  --text-primary:     #EDECE7;
-  --text-secondary:   #A5A29A;
-  --text-tertiary:    #73716B;
-  --text-link:        #8a9f7b;
-  --text-on-color:    #1C1B1A;
-  --text-on-accent:   #1C1B1A;
+  --text-primary:#EDECE7; --text-secondary:#A5A29A; --text-tertiary:#73716B;
+  --text-on-color:#1C1B1A;
 
-  /* ── 边框 ── */
-  --border-color:     #3A3834;
-  --border-light:     #302F2B;
-  --divider-color:    #302F2B;
+  --border-color:#3A3834; --border-light:#302F2B; --divider-color:#302F2B;
 
-  /* ── 强调色 ── */
-  --accent-primary:   #8a9f7b;  /* sage-400 (亮一些) */
-  --accent-secondary: #e58f53;
-  --accent-hover:     #a0b892;
+  --shadow-sm:0 1px 2px rgba(0,0,0,0.25); --shadow-md:0 4px 12px rgba(0,0,0,0.35);
+  --shadow-lg:0 8px 30px rgba(0,0,0,0.45);
 
-  /* ── 阴影 ── */
-  --shadow-sm:    0 1px 2px rgba(0, 0, 0, 0.25);
-  --shadow-md:    0 4px 12px rgba(0, 0, 0, 0.35);
-  --shadow-lg:    0 8px 30px rgba(0, 0, 0, 0.45);
-  --shadow-focus: 0 0 0 3px rgba(138, 159, 123, 0.25);
+  --accent-primary:#D4946E; --accent-secondary:#BF7B5A; --accent-hover:#E0AD8C;
+  --text-link:#D4946E; --text-on-accent:#1C1B1A;
+  --shadow-focus:0 0 0 3px rgba(212,148,110,0.25);
 }
 
-/* ===========================================
-   3. 系统深色模式 (未设置 data-theme 时)
-   =========================================== */
+/* ═══ 系统深色模式 ═══ */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg-primary:       #1C1B1A;
-    --bg-secondary:     #262522;
-    --bg-tertiary:      #302F2B;
-    --bg-hover:         #302F2B;
-    --bg-card:          #262522;
-    --bg-input:         #302F2B;
-    --bg-chat:          #1C1B1A;
-    --bg-titlebar:      #1C1B1A;
+    --bg-primary:#1C1B1A; --bg-secondary:#262522; --bg-tertiary:#302F2B;
+    --bg-hover:#302F2B;   --bg-card:#262522;      --bg-input:#302F2B;
+    --bg-chat:#1C1B1A;    --bg-titlebar:#1C1B1A;
 
-    --text-primary:     #EDECE7;
-    --text-secondary:   #A5A29A;
-    --text-tertiary:    #73716B;
-    --text-link:        #8a9f7b;
-    --text-on-color:    #1C1B1A;
-    --text-on-accent:   #1C1B1A;
+    --text-primary:#EDECE7; --text-secondary:#A5A29A; --text-tertiary:#73716B;
+    --text-on-color:#1C1B1A;
 
-    --border-color:     #3A3834;
-    --border-light:     #302F2B;
-    --divider-color:    #302F2B;
+    --border-color:#3A3834; --border-light:#302F2B; --divider-color:#302F2B;
 
-    --accent-primary:   #8a9f7b;
-    --accent-secondary: #e58f53;
-    --accent-hover:     #a0b892;
+    --shadow-sm:0 1px 2px rgba(0,0,0,0.25); --shadow-md:0 4px 12px rgba(0,0,0,0.35);
+    --shadow-lg:0 8px 30px rgba(0,0,0,0.45);
 
-    --shadow-sm:    0 1px 2px rgba(0, 0, 0, 0.25);
-    --shadow-md:    0 4px 12px rgba(0, 0, 0, 0.35);
-    --shadow-lg:    0 8px 30px rgba(0, 0, 0, 0.45);
-    --shadow-focus: 0 0 0 3px rgba(138, 159, 123, 0.25);
+    --accent-primary:#D4946E; --accent-secondary:#BF7B5A; --accent-hover:#E0AD8C;
+    --text-link:#D4946E; --text-on-accent:#1C1B1A;
+    --shadow-focus:0 0 0 3px rgba(212,148,110,0.25);
   }
 }
+
+/* 色阶变量 --coral-* 由 useThemeColor.ts 动态注入 */

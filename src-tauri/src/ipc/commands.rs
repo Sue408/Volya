@@ -77,6 +77,24 @@ pub async fn open_work(app_handle: tauri::AppHandle, state: State<'_, AppState>,
     }))
 }
 
+/// 删除作品
+#[tauri::command]
+pub async fn delete_work(state: State<'_, AppState>, id: String) -> Result<String, String> {
+    let mut manager_lock = state.manager.lock().await;
+
+    // 如果删除的是当前作品，同步清除会话
+    let is_current = manager_lock.current().map(|ws| ws.id == id).unwrap_or(false);
+
+    manager_lock.delete(&id).await.map_err(|e| format!("删除失败: {}", e))?;
+
+    if is_current {
+        let mut session_lock = state.session.lock().await;
+        *session_lock = None;
+    }
+
+    Ok(format!("作品已删除"))
+}
+
 /// 获取 Agent 的工具描述（用于前端展示）
 #[tauri::command]
 pub async fn get_tool_descriptions(state: State<'_, AppState>) -> Result<String, String> {

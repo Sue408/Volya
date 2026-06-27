@@ -24,6 +24,7 @@ pub fn run() {
             ipc::commands::create_work,
             ipc::commands::list_works,
             ipc::commands::open_work,
+            ipc::commands::delete_work,
             ipc::commands::get_tool_descriptions,
             ipc::commands::send_message,
             ipc::commands::handle_approval,

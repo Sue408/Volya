@@ -2,7 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { getCurrentWindow } from '@tauri-apps/api/window'
-import { ChevronLeft, Sun, Moon, Settings, Minus, Maximize2, Minimize2, X, FileText } from '@lucide/vue'
+import { ChevronLeft, Sun, Moon, Settings, Minus, Maximize2, Minimize2, X } from '@lucide/vue'
 import { useAgent } from '../composables/useAgent'
 import { useTheme } from '../composables/useTheme'
 
@@ -62,12 +62,11 @@ async function handleClose() {
 
 <template>
   <header class="titlebar" data-tauri-drag-region>
-    <!-- 左侧 — 返回 / 图标 + 标题 -->
+    <!-- 左侧 — 返回 + 标题（无图标） -->
     <div class="titlebar-left">
       <button v-if="showBack" class="tb-btn" @click="goBack" title="返回">
-        <ChevronLeft :size="16" />
+        <ChevronLeft :size="20" />
       </button>
-      <FileText v-else class="tb-icon" :size="18" />
       <span class="tb-title">{{ pageTitle }}</span>
       <span v-if="pageSubtitle" class="tb-sep">/</span>
       <span v-if="pageSubtitle" class="tb-subtitle">{{ pageSubtitle }}</span>
@@ -76,27 +75,27 @@ async function handleClose() {
     <!-- 中间 — 拖拽区 -->
     <div class="titlebar-center"></div>
 
-    <!-- 右侧 — 主题切换 / 设置 / 窗口控制 -->
+    <!-- 右侧 — 主题切换 / 设置 / 窗口控制（放大图标） -->
     <div class="titlebar-right">
       <button class="tb-btn" @click="toggleTheme" :title="effectiveTheme === 'dark' ? '切换亮色模式' : '切换暗色模式'">
-        <Sun v-if="effectiveTheme === 'light'" :size="16" />
-        <Moon v-else :size="16" />
+        <Sun v-if="effectiveTheme === 'light'" :size="20" />
+        <Moon v-else :size="20" />
       </button>
       <button class="tb-btn" @click="emit('openSettings')" title="设置">
-        <Settings :size="16" />
+        <Settings :size="20" />
       </button>
 
       <span class="tb-divider"></span>
 
       <button class="tb-btn ctrl" @click="handleMinimize" title="最小化">
-        <Minus :size="14" />
+        <Minus :size="18" />
       </button>
       <button class="tb-btn ctrl" @click="handleMaximize" :title="isMaximized ? '还原' : '最大化'">
-        <Maximize2 v-if="!isMaximized" :size="13" />
-        <Minimize2 v-else :size="13" />
+        <Maximize2 v-if="!isMaximized" :size="16" />
+        <Minimize2 v-else :size="16" />
       </button>
       <button class="tb-btn ctrl close" @click="handleClose" title="关闭">
-        <X :size="14" />
+        <X :size="18" />
       </button>
     </div>
   </header>
@@ -106,12 +105,11 @@ async function handleClose() {
 .titlebar {
   display: flex;
   align-items: center;
-  height: 40px;
-  padding: 0 var(--space-3);
+  height: 44px;
+  padding: 0 var(--space-4);
   background: var(--bg-titlebar);
   user-select: none;
   flex-shrink: 0;
-  /* 无 border-bottom，与内容区完全融合 */
 }
 
 /* ─── 左侧 ─── */
@@ -122,17 +120,14 @@ async function handleClose() {
   min-width: 0;
 }
 
-.tb-icon {
-  color: var(--accent-primary);
-  flex-shrink: 0;
-}
-
 .tb-title {
-  font-family: var(--font-sans);
-  font-size: var(--font-size-sm);
+  font-family: var(--font-logo);
+  font-size: var(--font-size-lg);
   font-weight: 600;
   color: var(--text-primary);
   white-space: nowrap;
+  line-height: 1;
+  letter-spacing: 0.06em;
 }
 
 .tb-sep {
@@ -141,7 +136,7 @@ async function handleClose() {
 }
 
 .tb-subtitle {
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-base);
   color: var(--text-secondary);
   white-space: nowrap;
   overflow: hidden;
@@ -165,8 +160,8 @@ async function handleClose() {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 30px;
+  width: 36px;
+  height: 34px;
   border: none;
   border-radius: var(--radius-sm);
   background: transparent;
@@ -187,7 +182,7 @@ async function handleClose() {
 
 .tb-divider {
   width: 1px;
-  height: 18px;
+  height: 22px;
   background: var(--border-light);
   margin: 0 var(--space-1);
 }
