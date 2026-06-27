@@ -24,27 +24,64 @@ export function useAgent() {
   const messages = ref<AgentMessage[]>([])
   const status = ref<SessionStatus>('idle')
   const isProcessing = ref(false)
+  const currentWorkId = ref<string>('')
+  const currentWorkTitle = ref<string>('')
   const currentPermissionLevel = ref(1)
   const pendingApproval = ref<{ toolName: string; toolUseId: string; reason: string } | null>(null)
 
   let msgCounter = 0
   let unlisteners: UnlistenFn[] = []
+  let listenersReady = false
   // block_id → messages 数组索引，用于流式 delta 追加
   const blockIndex = ref<Record<string, number>>({})
 
   /**
-   * 初始化：创建默认作品 + 注册事件监听
+   * 注册 Tauri 事件监听（只注册一次，防止重复）
    */
-  async function init(title: string = '未命名作品') {
-    try {
-      await invoke('create_work', { title })
-      // 获取当前状态
-      const state = await invoke<{ permission_level: number }>('get_session_state')
-      currentPermissionLevel.value = state.permission_level
-      setupListeners()
-    } catch (e) {
-      console.error('初始化失败:', e)
-    }
+  function ensureListeners() {
+    if (listenersReady) return
+    listenersReady = true
+    setupListeners()
+  }
+
+  /**
+   * 创建新作品 → 初始化会话
+   */
+  async function createWork(title: string): Promise<string> {
+    const result = await invoke<string>('create_work', { title })
+    const parsed = JSON.parse(result)
+    currentWorkId.value = parsed.id
+    currentWorkTitle.value = parsed.title
+    // 获取当前状态
+    const state = await invoke<{ permission_level: number }>('get_session_state')
+    currentPermissionLevel.value = state.permission_level
+    ensureListeners()
+    return parsed.id
+  }
+
+  /**
+   * 打开已有作品 → 初始化会话
+   */
+  async function openWork(id: string): Promise<void> {
+    const result = await invoke<{ id: string; title: string }>('open_work', { id })
+    currentWorkId.value = result.id
+    currentWorkTitle.value = result.title
+    // 获取当前状态
+    const state = await invoke<{ permission_level: number }>('get_session_state')
+    currentPermissionLevel.value = state.permission_level
+    ensureListeners()
+  }
+
+  /**
+   * 重置消息列表（切换作品时清空）
+   */
+  function resetMessages() {
+    messages.value = []
+    msgCounter = 0
+    blockIndex.value = {}
+    pendingApproval.value = null
+    status.value = 'idle'
+    isProcessing.value = false
   }
 
   /**
@@ -297,12 +334,16 @@ export function useAgent() {
     messages,
     status,
     isProcessing,
+    currentWorkId,
+    currentWorkTitle,
     currentPermissionLevel,
     pendingApproval,
     llmConfig,
     llmReady,
     // 方法
-    init,
+    createWork,
+    openWork,
+    resetMessages,
     sendMessage,
     respondApproval,
     setPermissionLevel,

@@ -1,10 +1,17 @@
 <script setup lang="ts">
+import { useRouter } from 'vue-router'
 import TitleBar from './components/TitleBar.vue'
+
+const router = useRouter()
+
+function handleOpenSettings() {
+  router.push('/settings')
+}
 </script>
 
 <template>
   <div class="app-shell">
-    <TitleBar />
+    <TitleBar @open-settings="handleOpenSettings" />
     <main class="app-main">
       <RouterView />
     </main>

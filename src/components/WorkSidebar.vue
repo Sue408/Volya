@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { Menu, FileText, Users, Map, BarChart3 } from '@lucide/vue'
+
 defineProps<{
   open: boolean
 }>()
@@ -12,30 +14,26 @@ const emit = defineEmits<{
   <aside class="work-sidebar" :class="{ collapsed: !open }">
     <div class="sidebar-header">
       <button class="toggle-btn" @click="emit('update:open', !open)" title="切换侧栏">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-          <line x1="3" y1="6" x2="21" y2="6" />
-          <line x1="3" y1="12" x2="21" y2="12" />
-          <line x1="3" y1="18" x2="21" y2="18" />
-        </svg>
+        <Menu :size="16" />
       </button>
       <span v-if="open" class="sidebar-title">导航</span>
     </div>
 
     <nav v-if="open" class="sidebar-nav">
       <button class="nav-btn active">
-        <span class="nav-icon">📝</span>
+        <FileText :size="16" class="nav-icon" />
         <span class="nav-label">大纲</span>
       </button>
       <button class="nav-btn" disabled>
-        <span class="nav-icon">👥</span>
+        <Users :size="16" class="nav-icon" />
         <span class="nav-label">角色</span>
       </button>
       <button class="nav-btn" disabled>
-        <span class="nav-icon">🗺️</span>
+        <Map :size="16" class="nav-icon" />
         <span class="nav-label">图谱</span>
       </button>
       <button class="nav-btn" disabled>
-        <span class="nav-icon">📊</span>
+        <BarChart3 :size="16" class="nav-icon" />
         <span class="nav-label">统计</span>
       </button>
     </nav>

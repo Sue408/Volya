@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Wrench, Lock, Sparkles } from '@lucide/vue'
 import type { AgentMessage } from '../composables/useAgent'
 
 defineProps<{
@@ -37,9 +38,7 @@ function formatTime(date: Date): string {
     <!-- 工具调用 -->
     <template v-else-if="message.role === 'tool'">
       <div class="message tool-message">
-        <div class="tool-header">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+        <diWrench :size="14" /th d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
           </svg>
           <span class="tool-name">{{ message.toolName || '工具调用' }}</span>
         </div>
@@ -53,10 +52,7 @@ function formatTime(date: Date): string {
     <template v-else-if="message.role === 'gate_request'">
       <div class="message gate-message">
         <div class="gate-header">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-          </svg>
+          <Lock :size="16" />
           <span>需要确认</span>
           <span class="gate-tool">{{ message.toolName }}</span>
         </div>
@@ -68,12 +64,7 @@ function formatTime(date: Date): string {
     <template v-else>
       <div class="message assistant-message">
         <div class="message-avatar">
-          <svg width="18" height="18" viewBox="0 0 32 32" fill="none">
-            <circle cx="16" cy="16" r="14" fill="var(--sage-300)" />
-            <circle cx="12" cy="14" r="2.5" fill="white" />
-            <circle cx="20" cy="14" r="2.5" fill="white" />
-            <path d="M10 21c2 3 10 3 12 0" stroke="white" stroke-width="1.5" stroke-linecap="round" fill="none" />
-          </svg>
+          <Sparkles :size="16" class="avatar-icon" />
         </div>
         <div class="message-body">
           <div class="message-sender">Doro</div>
@@ -235,12 +226,16 @@ function formatTime(date: Date): string {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: var(--sage-200);
+  background: var(--accent-secondary);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   margin-top: 2px;
+}
+
+.avatar-icon {
+  color: white;
 }
 
 .message-body {

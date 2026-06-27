@@ -2,7 +2,7 @@ use crate::agent::gate::{Gate, GateDecision};
 use crate::agent::llm::anthropic::{AnthropicClient, AnthropicMessage, ContentBlock};
 use crate::agent::llm::config::GlobalConfig;
 use crate::agent::tool::{get_tool_defs, Tool, ToolResult};
-use crate::workspace::data::WorkData;
+use crate::workspace::data::{Interaction, ToolCallRecord, WorkData};
 use serde::{Deserialize, Serialize};
 
 /// ============================================================
@@ -299,6 +299,7 @@ impl NovelAgent {
         self.state = AgentState::Idle;
         Self::emit_state(app, "idle", None);
         Self::emit(app, AgentEvent::Done);
+        self.sync_interactions();
     }
 
     /// 用户做出审批决策后，继续 LLM 循环
@@ -453,6 +454,49 @@ impl NovelAgent {
         self.state = AgentState::Idle;
         Self::emit_state(app, "idle", None);
         Self::emit(app, AgentEvent::Done);
+        self.sync_interactions();
+    }
+
+    /// 将 conversation_history 同步到 work_data.interactions（对话持久化）
+    fn sync_interactions(&mut self) {
+        for msg in &self.conversation_history {
+            // 提取文本内容
+            let text: String = msg.content.iter()
+                .filter_map(|b| match b {
+                    ContentBlock::Text { text } => Some(text.clone()),
+                    _ => None,
+                })
+                .collect::<Vec<_>>()
+                .join("\n");
+
+            // 提取工具调用记录
+            let tool_calls: Vec<ToolCallRecord> = msg.content.iter()
+                .filter_map(|b| match b {
+                    ContentBlock::ToolUse { id: _, name, input } => {
+                        Some(ToolCallRecord {
+                            tool_name: name.clone(),
+                            args: input.clone(),
+                            result: serde_json::json!({}), // 结果在后续 user 消息中
+                        })
+                    }
+                    _ => None,
+                })
+                .collect();
+
+            // 避免重复：检查是否已存在相同内容的消息
+            let exists = self.work_data.interactions.iter().any(|i| {
+                i.role == msg.role && i.content == text
+            });
+
+            if !exists {
+                self.work_data.interactions.push(Interaction {
+                    role: msg.role.clone(),
+                    content: text,
+                    timestamp: chrono::Utc::now(),
+                    tool_calls: if tool_calls.is_empty() { None } else { Some(tool_calls) },
+                });
+            }
+        }
     }
 
     pub async fn execute_tool(

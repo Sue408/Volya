@@ -1,13 +1,9 @@
 <script setup lang="ts">
-import { ref, nextTick, watch, onUnmounted } from 'vue'
+import { ref, nextTick, watch } from 'vue'
 import MessageBubble from './MessageBubble.vue'
 import ChatInput from './ChatInput.vue'
 import SettingsDialog from './SettingsDialog.vue'
 import { useAgent } from '../composables/useAgent'
-
-const emit = defineEmits<{
-  workCreated: []
-}>()
 
 const {
   messages,
@@ -17,36 +13,15 @@ const {
   pendingApproval,
   llmConfig,
   llmReady,
-  init,
   sendMessage,
   respondApproval,
   setPermissionLevel,
-  loadLlmConfig,
   saveLlmConfig,
-  cleanup,
 } = useAgent()
 
 const messagesContainer = ref<HTMLElement | null>(null)
-
-// 组件卸载时清理 Tauri 事件监听，避免热更新重复注册
-onUnmounted(() => cleanup())
 const showPermissionMenu = ref(false)
 const showSettings = ref(false)
-
-// 初始化会话
-init('我的新作品').then(async () => {
-  emit('workCreated')
-  await loadLlmConfig()
-  const greeting = llmReady.value
-    ? '你好呀！我是 **Doro** 🍊，你的专属创作助手！\n\n我可以帮你：\n- 📖 **管理作品** — 查看和修改作品元数据\n- 👤 **创建角色** — 设计人物、地点、势力等\n- 📝 **生成正文** — 辅助创作章节内容\n- 🔗 **管理图谱** — 构建故事的关系网络\n\n当前权限模式：**半自动 (Lv 1)**\n现在开始我们的创作之旅吧！✨'
-    : '你好呀！我是 **Doro** 🍊～\n\n欢迎来到 Volya！在开始之前，需要你配置一下 LLM：\n1. 点击右上角的 ⚙️ 齿轮图标\n2. 输入你的 Anthropic API Key\n3. 选择模型，然后保存配置\n\n配置完成后，我们就可以开始创作啦！🎉'
-  messages.value.push({
-    id: 0,
-    role: 'assistant',
-    content: greeting,
-    timestamp: new Date(),
-  })
-})
 
 // 自动滚动到底部
 watch(

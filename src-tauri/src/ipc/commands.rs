@@ -103,15 +103,22 @@ pub async fn send_message(
     session.state = SessionState::Processing;
     session.agent.process_message(&message, &app_handle, &mut *manager_lock).await;
 
-    // 如果 agent 有待审批项，保持 awaiting_approval 状态
-    if !session.agent.pending_approvals.is_empty() {
+    // 将 Agent 的 work_data 同步回 WorkManager（对话持久化）
+    if let Some(ref mut ws) = manager_lock.current_mut() {
+        ws.data.interactions = session.agent.work_data.interactions.clone();
+        ws.data.meta = session.agent.work_data.meta.clone();
+    }
+
+    // 如果没有待审批项，直接保存
+    if session.agent.pending_approvals.is_empty() {
+        let _ = manager_lock.save_current().await;
+        session.state = SessionState::Idle;
+    } else {
         session.state = SessionState::AwaitingApproval {
             tool_name: session.agent.pending_approvals.first()
                 .map(|p| p.tool_name.clone())
                 .unwrap_or_default(),
         };
-    } else {
-        session.state = SessionState::Idle;
     }
 
     Ok(())
@@ -142,8 +149,14 @@ pub async fn handle_approval(
     let mut manager_lock = state.manager.lock().await;
     session.agent.continue_after_approval(decisions, &app_handle, &mut *manager_lock).await;
 
-    // continue_after_approval 内部会管理状态, 但需要同步 session.state
+    // 同步 Agent 数据回 WorkManager 并保存
+    if let Some(ref mut ws) = manager_lock.current_mut() {
+        ws.data.interactions = session.agent.work_data.interactions.clone();
+        ws.data.meta = session.agent.work_data.meta.clone();
+    }
+
     if session.agent.pending_approvals.is_empty() {
+        let _ = manager_lock.save_current().await;
         session.state = SessionState::Idle;
     } else {
         session.state = SessionState::AwaitingApproval {
