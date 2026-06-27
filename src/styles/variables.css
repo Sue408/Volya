@@ -1,0 +1,139 @@
+/* ============================================================
+   Volya — 主题配色系统
+   主色调：鼠尾草绿 (Sage Green) 🍃
+   点缀色：暖杏橙 (Warm Apricot) 🍊
+   ============================================================ */
+
+:root {
+  /* ─── 鼠尾绿主色系 ─── */
+  --sage-50:  #f6f8f4;
+  --sage-100: #e8ede3;
+  --sage-200: #d1dbca;
+  --sage-300: #b3c2a8;
+  --sage-400: #8a9f7b;
+  --sage-500: #6c8360;
+  --sage-600: #566b4c;
+  --sage-700: #43543b;
+  --sage-800: #36442f;
+  --sage-900: #283623;
+
+  /* ─── 暖杏点缀色 ─── */
+  --apricot-50:  #fdf6f0;
+  --apricot-100: #fae8d6;
+  --apricot-200: #f4ceac;
+  --apricot-300: #ecae7d;
+  --apricot-400: #e58f53;
+  --apricot-500: #de7533;
+  --apricot-600: #c85d1e;
+  --apricot-700: #a7481a;
+  --apricot-800: #883b1b;
+  --apricot-900: #6e3118;
+
+  /* ─── 中性色 ─── */
+  --neutral-50:  #fafafa;
+  --neutral-100: #f4f4f3;
+  --neutral-200: #e8e7e4;
+  --neutral-300: #d1cfca;
+  --neutral-400: #a8a69e;
+  --neutral-500: #7f7d74;
+  --neutral-600: #656359;
+  --neutral-700: #514f47;
+  --neutral-800: #3a3933;
+  --neutral-900: #1f1e1a;
+
+  /* ─── 语义色 ─── */
+  --success: #5a9e6f;
+  --warning: #d4a556;
+  --error:   #c94f4f;
+  --info:    #5b8db8;
+
+  /* ─── 背景与前景 ─── */
+  --bg-primary:       var(--sage-50);
+  --bg-secondary:     #ffffff;
+  --bg-tertiary:      var(--sage-100);
+  --bg-hover:         var(--sage-100);
+  --bg-card:          #ffffff;
+  --bg-input:         #ffffff;
+  --bg-chat:          #ffffff;
+
+  --text-primary:     var(--neutral-900);
+  --text-secondary:   var(--neutral-600);
+  --text-tertiary:    var(--neutral-400);
+  --text-link:        var(--sage-600);
+  --text-on-color:    #ffffff;
+
+  --border-color:     var(--sage-200);
+  --border-light:     var(--sage-100);
+  --divider-color:    var(--sage-100);
+
+  --accent-primary:   var(--sage-500);
+  --accent-secondary: var(--apricot-400);
+  --accent-hover:     var(--sage-600);
+
+  /* ─── 圆角 ─── */
+  --radius-sm:    6px;
+  --radius-md:    10px;
+  --radius-lg:    16px;
+  --radius-xl:    24px;
+  --radius-full:  9999px;
+
+  /* ─── 阴影 ─── */
+  --shadow-sm:    0 1px 2px rgba(40, 54, 35, 0.06);
+  --shadow-md:    0 4px 12px rgba(40, 54, 35, 0.08);
+  --shadow-lg:    0 8px 30px rgba(40, 54, 35, 0.12);
+  --shadow-focus: 0 0 0 3px rgba(86, 107, 76, 0.2);
+
+  /* ─── 字体 ─── */
+  --font-sans:    'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono:    'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+  --font-size-xs:    12px;
+  --font-size-sm:    13px;
+  --font-size-base:  14px;
+  --font-size-lg:    16px;
+  --font-size-xl:    20px;
+  --font-size-2xl:   24px;
+
+  /* ─── 间距 ─── */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  /* ─── 动画 ─── */
+  --transition-fast:   150ms ease;
+  --transition-normal: 250ms ease;
+  --transition-slow:   400ms ease;
+}
+
+/* ─── 深色模式（后续可选） ─── */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-primary:       #1a2117;
+    --bg-secondary:     #222b1e;
+    --bg-tertiary:      #2a3525;
+    --bg-hover:         #2a3525;
+    --bg-card:          #222b1e;
+    --bg-input:         #2a3525;
+    --bg-chat:          #1a2117;
+
+    --text-primary:     #e8ede3;
+    --text-secondary:   #b3c2a8;
+    --text-tertiary:    #8a9f7b;
+    --text-link:        #b3c2a8;
+    --text-on-color:    #1a2117;
+
+    --border-color:     #36442f;
+    --border-light:     #2a3525;
+    --divider-color:    #2a3525;
+
+    --shadow-sm:    0 1px 2px rgba(0, 0, 0, 0.2);
+    --shadow-md:    0 4px 12px rgba(0, 0, 0, 0.3);
+    --shadow-lg:    0 8px 30px rgba(0, 0, 0, 0.4);
+    --shadow-focus: 0 0 0 3px rgba(179, 194, 168, 0.25);
+  }
+}
