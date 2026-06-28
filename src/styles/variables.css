@@ -89,3 +89,52 @@
 }
 
 /* 色阶变量 --coral-* 由 useThemeColor.ts 动态注入 */
+
+/* ═══ 自定义滚动条 ═══
+   Firefox: 使用标准 scrollbar-* 属性
+   Chromium (Edge/Chrome): 使用 ::-webkit-scrollbar 伪元素
+   两者不可混用——scrollbar-* 非 auto 时会覆盖 webkit 伪元素 */
+
+/* Firefox — @supports 隔离，不影响 Chromium */
+@supports (scrollbar-width: auto) and (not selector(::-webkit-scrollbar)) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-color) transparent;
+  }
+}
+
+/* Chromium / WebKit */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: var(--radius-full);
+  transition: background var(--transition-fast);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
+}
+
+/* 彻底隐藏上下箭头按钮 */
+::-webkit-scrollbar-button {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+::-webkit-scrollbar-button:start:decrement,
+::-webkit-scrollbar-button:start:increment,
+::-webkit-scrollbar-button:end:decrement,
+::-webkit-scrollbar-button:end:increment {
+  display: none;
+  width: 0;
+  height: 0;
+}

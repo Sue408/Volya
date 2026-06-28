@@ -13,7 +13,11 @@ function handleOpenSettings() {
   <div class="app-shell">
     <TitleBar @open-settings="handleOpenSettings" />
     <main class="app-main">
-      <RouterView />
+      <RouterView v-slot="{ Component }">
+        <Transition name="page" mode="out-in">
+          <component :is="Component" />
+        </Transition>
+      </RouterView>
     </main>
   </div>
 </template>
@@ -59,5 +63,43 @@ body {
 .app-main {
   flex: 1;
   overflow: hidden;
+}
+
+/* ═══ 全局卡片基础样式 ═══ */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--transition-fast), border-color var(--transition-fast);
+}
+
+.card-interactive {
+  cursor: pointer;
+}
+
+.card-interactive:hover {
+  border-color: var(--border-color);
+  box-shadow: var(--shadow-md);
+}
+
+.card-interactive:active {
+  transform: scale(0.99);
+}
+
+/* ─── 页面过渡动画 ─── */
+.page-enter-active,
+.page-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.page-enter-from {
+  opacity: 0;
+  transform: translateY(6px);
+}
+
+.page-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
 }
 </style>

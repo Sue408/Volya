@@ -1,22 +1,45 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { Plus, Trash2 } from '@lucide/vue'
+import { Plus, ArrowRight, Trash2, Book, Clock } from '@lucide/vue'
 import { useWorks } from '../composables/useWorks'
 
 const router = useRouter()
 const { works, loading, listWorks, createWork, deleteWork } = useWorks()
 
-const hoverNew = ref(false)
+const selectedId = ref<string | null>(null)
 const creating = ref(false)
 const showNewDialog = ref(false)
 const newTitle = ref('')
-
-const deletingId = ref<string | null>(null)
 const showDeleteConfirm = ref(false)
 const deleteTarget = ref<{ id: string; title: string } | null>(null)
+const deletingId = ref<string | null>(null)
 
-onMounted(() => { listWorks() })
+onMounted(async () => {
+  await listWorks()
+  if (works.value.length > 0) {
+    selectedId.value = works.value[0].id
+  }
+})
+
+const sidebarListRef = ref<HTMLElement | null>(null)
+const scrolled = ref(false)
+const scrolledToBottom = ref(false)
+
+function onSidebarScroll() {
+  const el = sidebarListRef.value
+  if (!el) return
+  scrolled.value = el.scrollTop > 0
+  scrolledToBottom.value = el.scrollHeight - el.scrollTop - el.clientHeight < 2
+}
+
+const selectedWork = computed(() =>
+  works.value.find(w => w.id === selectedId.value) || null
+)
+
+function selectWork(id: string) { selectedId.value = id }
+
+function openWork(id: string) { router.push(`/works/${id}`) }
 
 async function handleCreate() {
   const title = newTitle.value.trim()
@@ -26,10 +49,8 @@ async function handleCreate() {
   creating.value = false
   showNewDialog.value = false
   newTitle.value = ''
-  if (id) router.push(`/works/${id}`)
+  if (id) { selectedId.value = id }
 }
-
-function openWork(id: string) { router.push(`/works/${id}`) }
 
 function confirmDelete(work: { id: string; title: string }) {
   deleteTarget.value = work
@@ -39,9 +60,12 @@ function confirmDelete(work: { id: string; title: string }) {
 async function handleDelete() {
   if (!deleteTarget.value) return
   deletingId.value = deleteTarget.value.id
-  await deleteWork(deleteTarget.value.id)
+  const ok = await deleteWork(deleteTarget.value.id)
   deletingId.value = null
   showDeleteConfirm.value = false
+  if (ok && selectedId.value === deleteTarget.value.id) {
+    selectedId.value = works.value[0]?.id || null
+  }
   deleteTarget.value = null
 }
 
@@ -49,70 +73,109 @@ function statusLabel(status: string): string {
   const map: Record<string, string> = { Draft: '草稿', InProgress: '进行中', Completed: '已完成' }
   return map[status] || status
 }
+
+function timeAgo(iso: string): string {
+  const d = new Date(iso); const n = new Date()
+  const m = Math.floor((n.getTime() - d.getTime()) / 60000)
+  if (m < 1) return '刚刚'
+  if (m < 60) return `${m} 分钟前`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `${h} 小时前`
+  const day = Math.floor(h / 24)
+  return day < 7 ? `${day} 天前` : d.toLocaleDateString('zh-CN')
+}
 </script>
 
 <template>
   <div class="works-list">
-    <!-- 上区：标题 + 副标题 -->
-    <div class="top-section">
-      <h1 class="page-title">Volya</h1>
-      <p class="page-subtitle">落笔生花 · 万物成书</p>
-    </div>
-
-    <!-- 下区：控制栏 + 作品列表（占剩余高度） -->
-    <div class="content-section">
-      <!-- Control bar -->
-      <div class="control-bar">
-        <span class="control-label">我的作品</span>
-        <button
-          class="btn-new"
-          :class="{ expanded: hoverNew }"
-          @mouseenter="hoverNew = true"
-          @mouseleave="hoverNew = false"
-          @click="showNewDialog = true"
-        >
-          <template v-if="hoverNew">
-            <Plus :size="16" />
-            <span class="btn-new-label">新建作品</span>
-          </template>
-          <Plus v-else :size="16" />
-        </button>
+    <div class="workspace">
+      <!-- ═══ Title Wrapper ═══ -->
+      <div class="title-wrapper">
+        <h1 class="page-title">Volya</h1>
+        <p class="page-subtitle">落笔生花 · 万物成书</p>
       </div>
 
-      <!-- Works list -->
-      <div v-if="!loading" class="works-list-vertical">
-        <div v-if="works.length === 0" class="works-empty">
-          <p class="empty-hint">还没有作品，点击右上角 + 开始创作吧</p>
-        </div>
-
-        <div
-          v-for="work in works"
-          :key="work.id"
-          class="work-row"
-          @click="openWork(work.id)"
-        >
-          <div class="row-left">
-            <h3 class="row-title">{{ work.title }}</h3>
-            <span class="row-words">{{ work.completed_words.toLocaleString() }} 字</span>
-          </div>
-          <div class="row-right">
-            <span class="row-status">{{ statusLabel(work.status) }}</span>
-            <button
-              class="row-delete"
-              :class="{ loading: deletingId === work.id }"
-              @click.stop="confirmDelete(work)"
-              title="删除作品"
-            >
-              <Trash2 :size="14" />
+      <!-- ═══ Main Wrapper ═══ -->
+      <div class="main-wrapper">
+        <!-- 左侧：作品选择栏 (1) -->
+        <aside class="works-sidebar card">
+          <div class="sidebar-header">
+            <Book :size="16" />
+            <span class="sidebar-label">作品</span>
+            <button class="sidebar-add" @click="showNewDialog = true" title="新建作品">
+              <Plus :size="14" />
             </button>
-            <span class="row-arrow">&rarr;</span>
           </div>
-        </div>
-      </div>
 
-      <!-- 加载 -->
-      <div v-if="loading" class="loading-state">
-        <span class="loading-dot"></span>
+          <div v-if="loading" class="sidebar-loading">
+            <span class="loading-dot"></span>
+          </div>
+
+          <div v-else-if="works.length === 0" class="sidebar-empty">
+            <p>还没有作品</p>
+          </div>
+
+          <div v-else ref="sidebarListRef" class="sidebar-list" :class="{ 'scrolled': scrolled, 'at-bottom': scrolledToBottom }" @scroll="onSidebarScroll">
+            <div
+              v-for="work in works"
+              :key="work.id"
+              class="sidebar-item"
+              :class="{ active: selectedId === work.id }"
+              @click="selectWork(work.id)"
+            >
+              <div class="item-top">
+                <span class="item-title">{{ work.title }}</span>
+                <button class="item-delete" @click.stop="confirmDelete(work)" title="删除">
+                  <Trash2 :size="12" />
+                </button>
+              </div>
+              <div class="item-meta">
+                <span class="item-status" :class="`s-${work.status.toLowerCase()}`">{{ statusLabel(work.status) }}</span>
+                <span class="item-words">{{ work.completed_words.toLocaleString() }} 字</span>
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        <!-- 右侧：详情预览 (9) -->
+        <main class="works-preview">
+          <Transition name="preview-fade">
+            <div v-if="works.length === 0" key="empty" class="preview-empty card">
+              <p>还没有作品，开始创作吧</p>
+            </div>
+            <div v-else-if="loading" key="loading" class="preview-loading">
+              <span class="loading-dot"></span>
+            </div>
+            <div v-else-if="selectedWork" :key="selectedWork.id" class="preview-detail card">
+              <div class="detail-top">
+                <div class="detail-cover" :class="`cover-${selectedWork.status.toLowerCase()}`">
+                  <Book :size="32" />
+                </div>
+                <div class="detail-info">
+                  <h2 class="detail-title">{{ selectedWork.title }}</h2>
+                  <div class="detail-stats">
+                    <span class="stat-item">{{ selectedWork.completed_words.toLocaleString() }} 字</span>
+                    <span class="stat-sep">·</span>
+                    <span class="stat-item" :class="`s-${selectedWork.status.toLowerCase()}`">{{ statusLabel(selectedWork.status) }}</span>
+                    <span class="stat-sep">·</span>
+                    <Clock :size="13" />
+                    <span class="stat-item">{{ timeAgo(selectedWork.updated_at) }}</span>
+                  </div>
+                </div>
+              </div>
+              <div class="detail-divider"></div>
+              <div class="detail-body">
+                <p class="detail-snippet">从这里继续你的故事...</p>
+              </div>
+              <div class="detail-actions">
+                <button class="detail-btn primary" @click="openWork(selectedWork.id)">
+                  <span>继续创作</span>
+                  <ArrowRight :size="16" />
+                </button>
+              </div>
+            </div>
+          </Transition>
+        </main>
       </div>
     </div>
 
@@ -151,7 +214,7 @@ function statusLabel(status: string): string {
               :disabled="creating || !newTitle.trim()"
               @click="handleCreate"
             >
-              {{ creating ? '创建中...' : '开始创作 ✨' }}
+              {{ creating ? '创建中...' : '开始创作' }}
             </button>
           </div>
         </div>
@@ -166,127 +229,195 @@ function statusLabel(status: string): string {
   flex-direction: column;
   align-items: center;
   height: 100%;
-  padding: 5vh 10vw;
+  padding: var(--space-8) var(--space-6);
   overflow-y: auto;
 }
 
-/* ─── 上区：标题 ─── */
-.top-section {
+.workspace {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  padding-top: 4vh;
-  margin-bottom: 5vh;
+  gap: var(--space-5);
+  width: 86%;
+  max-width: 960px;
+  min-width: 0;
+  flex: 1;
+  min-height: 0;
+}
+
+/* ═══ Title Wrapper ═══ */
+.title-wrapper {
+  padding-bottom: var(--space-1);
 }
 
 .page-title {
   font-family: var(--font-logo);
-  font-size: var(--font-size-5xl);
+  font-size: var(--font-size-3xl);
   font-weight: 600;
   color: var(--text-primary);
   letter-spacing: 0.06em;
   line-height: 1.1;
-  margin-bottom: var(--space-3);
+  margin-bottom: var(--space-2);
+  transition: font-size var(--transition-normal);
 }
 
 .page-subtitle {
   font-family: var(--font-display);
-  font-size: var(--font-size-lg);
+  font-size: var(--font-size-base);
   font-weight: 500;
   color: var(--text-tertiary);
+  transition: font-size var(--transition-normal);
 }
 
-/* ─── 下区：内容 ─── */
-.content-section {
+/* 窗口较宽时标题放大 */
+@media (min-width: 1200px) {
+  .page-title { font-size: var(--font-size-4xl); }
+  .page-subtitle { font-size: var(--font-size-lg); }
+}
+
+@media (min-width: 1600px) {
+  .page-title { font-size: 3rem; }
+  .page-subtitle { font-size: var(--font-size-xl); }
+}
+
+/* ═══ Main Wrapper: 1:9 卡片布局 ═══ */
+.main-wrapper {
+  display: flex;
+  gap: var(--space-5);
+  flex: 1;
+  min-height: 0;
+  max-height: 460px;
+}
+
+/* ─── 左侧：作品选择栏 (1) ─── */
+.works-sidebar {
+  width: 28%;
+  min-width: 160px;
+  max-width: 240px;
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  width: 100%;
-  max-width: 520px;
-  flex: 1;
+  padding: var(--space-4);
+  min-height: 0;
 }
 
-/* ─── 控制栏 ─── */
-.control-bar {
+.sidebar-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding-bottom: var(--space-3);
-  margin-bottom: var(--space-4);
-  border-bottom: 1px solid var(--border-light);
-}
-
-.control-label {
-  font-size: var(--font-size-base);
-  font-weight: 600;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
   color: var(--text-secondary);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
 }
 
-/* ─── 新建按钮：v-if 切换两种状态 ─── */
-.btn-new {
+.sidebar-add {
+  margin-left: auto;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-1);
-  width: 36px;
-  height: 36px;
-  padding: 0;
+  width: 24px;
+  height: 24px;
   border: none;
-  border-radius: var(--radius-full);
-  background: var(--accent-primary);
-  color: var(--text-on-color);
-  cursor: pointer;
-  transition: width 0.25s ease, box-shadow 0.25s ease, padding 0.25s ease;
-  white-space: nowrap;
-  flex-shrink: 0;
-  overflow: hidden;
-}
-
-.btn-new.expanded {
-  width: 130px;
-  padding: 0 var(--space-4);
-  box-shadow: 0 0 12px rgba(201,96,58,0.35);
-}
-
-.btn-new-label {
-  font-family: var(--font-sans);
-  font-size: var(--font-size-sm);
-  font-weight: 500;
-  color: var(--text-on-color);
-}
-
-/* ─── 纵向作品列表 ─── */
-.works-list-vertical {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-.work-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--space-3) var(--space-4);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-tertiary);
   cursor: pointer;
   transition: all var(--transition-fast);
 }
 
-.work-row:hover {
+.sidebar-add:hover {
+  background: var(--accent-primary);
+  color: var(--text-on-color);
+}
+
+.sidebar-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  padding-right: var(--space-1);
+  margin-right: calc(var(--space-1) * -1);
+  /* 完全隐藏滚动条，保留滑动功能 */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.sidebar-list::-webkit-scrollbar {
+  display: none;
+}
+
+/* ─── 动态上下边缘淡出 ───
+   scrollTop=0:  仅底部淡化
+   scrollTop>0:  上下都淡化
+   scrolled 到底: 仅顶部淡化 */
+.sidebar-list {
+  -webkit-mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
+  mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  transition: -webkit-mask-image var(--transition-normal), mask-image var(--transition-normal);
+}
+
+.sidebar-list.scrolled {
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%);
+}
+
+.sidebar-list.at-bottom {
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 100%);
+  mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 100%);
+}
+
+.sidebar-item {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  transition: background var(--transition-fast), transform var(--transition-fast);
+  will-change: transform;
+}
+
+.sidebar-item:hover {
+  background: var(--bg-hover);
+  transform: scale(1.03);
+}
+
+.sidebar-item.active {
   background: var(--bg-tertiary);
 }
 
-.work-row:active {
-  transform: scale(0.99);
+.sidebar-item.active .item-title {
+  color: var(--accent-primary);
 }
 
-.row-delete {
+.item-top {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.item-title {
+  flex: 1;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.item-delete {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 22px;
+  height: 22px;
   border: none;
   border-radius: var(--radius-sm);
   background: transparent;
@@ -297,85 +428,210 @@ function statusLabel(status: string): string {
   flex-shrink: 0;
 }
 
-.work-row:hover .row-delete {
+.sidebar-item:hover .item-delete {
   opacity: 1;
 }
 
-.row-delete:hover {
+.item-delete:hover {
   background: var(--error);
   color: white;
-  opacity: 0.85;
 }
 
-.row-delete.loading {
-  opacity: 1;
-  animation: pulse 1.5s ease-in-out infinite;
-}
-
-.row-left {
+.item-meta {
   display: flex;
-  align-items: baseline;
-  gap: var(--space-3);
-  min-width: 0;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-xs);
 }
 
-.row-title {
-  font-size: var(--font-size-base);
+.item-status.s-inprogress { color: var(--accent-primary); }
+.item-status.s-completed { color: var(--success); }
+.item-status.s-draft { color: var(--text-tertiary); }
+
+.item-words {
+  color: var(--text-tertiary);
+}
+
+/* ─── 右侧：详情预览 (9) ─── */
+.works-preview {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  position: relative;
+}
+
+.preview-detail {
+  padding: var(--space-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.detail-top {
+  display: flex;
+  gap: var(--space-5);
+  align-items: flex-start;
+}
+
+.detail-cover {
+  width: 80px;
+  height: 100px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: white;
+}
+
+.cover-draft { background: linear-gradient(145deg, var(--bg-tertiary), var(--border-color)); color: var(--text-tertiary); }
+.cover-inprogress { background: linear-gradient(145deg, var(--accent-primary), var(--accent-hover)); }
+.cover-completed { background: linear-gradient(145deg, var(--success), #3d7a52); }
+
+.detail-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-top: var(--space-1);
+}
+
+.detail-title {
+  font-family: var(--font-display);
+  font-size: var(--font-size-2xl);
   font-weight: 600;
   color: var(--text-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
-.row-words {
-  font-size: var(--font-size-sm);
-  color: var(--text-tertiary);
-  white-space: nowrap;
-}
-
-.row-right {
+.detail-stats {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  flex-shrink: 0;
-}
-
-.row-status {
-  font-size: var(--font-size-xs);
-  color: var(--accent-primary);
-}
-
-.row-arrow {
-  font-size: var(--font-size-lg);
+  gap: var(--space-1);
+  font-size: var(--font-size-sm);
   color: var(--text-tertiary);
-  transition: transform var(--transition-fast);
+  flex-wrap: wrap;
 }
 
-.work-row:hover .row-arrow {
-  transform: translateX(4px);
-  color: var(--accent-primary);
+.stat-sep { opacity: 0.3; }
+
+.stat-item.s-inprogress { color: var(--accent-primary); }
+.stat-item.s-completed { color: var(--success); }
+
+.detail-divider {
+  height: 1px;
+  background: var(--divider-color);
 }
 
-/* ─── 空状态 ─── */
-.works-empty {
+.detail-body {
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--space-10) var(--space-4);
 }
 
-.empty-hint {
+.detail-snippet {
+  font-family: var(--font-display);
+  font-size: var(--font-size-lg);
+  color: var(--text-tertiary);
+  font-style: italic;
+  text-align: center;
+}
+
+.detail-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.detail-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-5);
+  border: none;
+  border-radius: var(--radius-md);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.detail-btn.primary {
+  background: var(--accent-primary);
+  color: var(--text-on-color);
+}
+
+.detail-btn.primary:hover {
+  background: var(--accent-hover);
+  gap: var(--space-3);
+}
+
+/* ─── 预览卡片淡入淡出 ───
+     绝对定位叠放，避免离开元素移除后父容器高度抖动 */
+.preview-fade-enter-active,
+.preview-fade-leave-active {
+  transition: opacity 200ms ease;
+  position: absolute;
+  inset: 0;
+}
+
+.preview-fade-enter-from,
+.preview-fade-leave-to {
+  opacity: 0;
+}
+
+/* ─── 空/加载 ─── */
+.sidebar-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6);
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+  flex: 1;
+}
+
+.sidebar-empty {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6);
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+}
+
+.preview-empty {
+  height: 100%;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.preview-loading {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.preview-empty,
+.preview-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: var(--space-8);
   font-size: var(--font-size-base);
   color: var(--text-tertiary);
 }
 
-/* ─── 加载 ─── */
-.loading-state {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex: 1;
+.preview-empty {
+  min-height: 200px;
 }
 
 .loading-dot {
@@ -391,50 +647,13 @@ function statusLabel(status: string): string {
   50% { opacity: 0.3; }
 }
 
-/* ─── 对话框通用 ─── */
-.dialog-desc {
-  font-size: var(--font-size-base);
-  color: var(--text-secondary);
-  margin-bottom: var(--space-5);
-  line-height: 1.5;
-}
-
-.dialog-warn {
-  border-top: 3px solid var(--error);
-}
-
-.btn-ghost {
-  background: transparent;
-  color: var(--text-tertiary);
-  padding: var(--space-2) var(--space-5);
-  border: none;
-  border-radius: var(--radius-md);
-  font-family: var(--font-sans);
-  font-size: var(--font-size-sm);
-  cursor: pointer;
-  transition: color var(--transition-fast);
-}
-
-.btn-ghost:hover {
-  color: var(--text-secondary);
-}
-
-.btn-danger {
-  background: var(--error);
-  color: white;
-  padding: var(--space-2) var(--space-5);
-  border: none;
-  border-radius: var(--radius-md);
-  font-family: var(--font-sans);
-  font-size: var(--font-size-sm);
-  font-weight: 500;
-  cursor: pointer;
-  transition: opacity var(--transition-fast);
-}
-
-.btn-danger:hover {
-  background: #B05A5A;
-}
+/* ═══ 对话框 ═══ */
+.dialog-desc { font-size: var(--font-size-base); color: var(--text-secondary); margin-bottom: var(--space-5); line-height: 1.5; }
+.dialog-warn { border-top: 3px solid var(--error); }
+.btn-ghost { background: transparent; color: var(--text-tertiary); padding: var(--space-2) var(--space-5); border: none; border-radius: var(--radius-md); font-family: var(--font-sans); font-size: var(--font-size-sm); cursor: pointer; transition: color var(--transition-fast); }
+.btn-ghost:hover { color: var(--text-secondary); }
+.btn-danger { background: var(--error); color: white; padding: var(--space-2) var(--space-5); border: none; border-radius: var(--radius-md); font-family: var(--font-sans); font-size: var(--font-size-sm); font-weight: 500; cursor: pointer; }
+.btn-danger:hover { background: #B05A5A; }
 
 /* ===========================================
    新建对话框
