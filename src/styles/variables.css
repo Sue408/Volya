@@ -15,10 +15,13 @@
   --font-sans:'Outfit','Noto Sans SC',-apple-system,BlinkMacSystemFont,sans-serif;
   --font-mono:Menlo,Consolas,monospace;
 
-  /* ─── 字号 ─── */
-  --font-size-xs:0.8125rem; --font-size-sm:0.875rem; --font-size-base:0.9375rem;
-  --font-size-lg:1.125rem; --font-size-xl:1.375rem; --font-size-2xl:1.75rem;
-  --font-size-3xl:2.25rem; --font-size-4xl:3rem; --font-size-5xl:3.75rem;
+  /* ─── 字号（全部乘以 --font-scale，由 App.vue 动态控制） ─── */
+  --font-scale: 1;
+  --font-size-xs:calc(0.875rem * var(--font-scale)); --font-size-sm:calc(0.9375rem * var(--font-scale));
+  --font-size-base:calc(1rem * var(--font-scale)); --font-size-lg:calc(1.25rem * var(--font-scale));
+  --font-size-xl:calc(1.5rem * var(--font-scale)); --font-size-2xl:calc(2rem * var(--font-scale));
+  --font-size-3xl:calc(2.5rem * var(--font-scale)); --font-size-4xl:calc(3.25rem * var(--font-scale));
+  --font-size-5xl:calc(4rem * var(--font-scale));
 
   /* ─── 行高/间距/动画 ─── */
   --leading-tight:1.25; --leading-normal:1.5; --leading-relaxed:1.75;
