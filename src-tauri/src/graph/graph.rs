@@ -66,13 +66,6 @@ impl Graph {
         self.nodes.values().collect()
     }
 
-    pub fn nodes_by_category(&self, category: &NodeCategory) -> Vec<&Node> {
-        self.nodes
-            .values()
-            .filter(|n| std::mem::discriminant(&n.category) == std::mem::discriminant(category))
-            .collect()
-    }
-
     // ─── Edge CRUD ───
 
     /// 添加边，如果是 Event→Event 则校验 DAG
@@ -130,10 +123,6 @@ impl Graph {
         }
 
         Some(edge)
-    }
-
-    pub fn get_edge(&self, edge_id: &EdgeId) -> Option<&Edge> {
-        self.edges.get(edge_id)
     }
 
     pub fn all_edges(&self) -> Vec<&Edge> {

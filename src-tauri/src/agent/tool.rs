@@ -139,6 +139,8 @@ impl Tool for UpdateWorkMeta {
                 "genre":       { "type": "string", "description": "题材（奇幻/科幻/言情等）" },
                 "audience":    { "type": "string", "description": "目标受众" },
                 "target_words": { "type": "integer", "description": "目标字数" },
+                "tags":  { "type": "array", "items": { "type": "string" }, "description": "作品标签" },
+                "status": { "type": "string", "enum": ["draft","in_progress","completed"], "description": "作品状态" },
             }
         })
     }
@@ -154,6 +156,18 @@ impl Tool for UpdateWorkMeta {
         if let Some(v) = args.get("genre").and_then(|v| v.as_str()) { meta.genre = Some(v.to_string()); }
         if let Some(v) = args.get("audience").and_then(|v| v.as_str()) { meta.audience = Some(v.to_string()); }
         if let Some(v) = args.get("target_words").and_then(|v| v.as_u64()) { meta.target_words = Some(v); }
+        // tags: 支持 JSON 数组
+        if let Some(v) = args.get("tags").and_then(|v| v.as_array()) {
+            meta.tags = v.iter().filter_map(|s| s.as_str().map(|s| s.to_string())).collect();
+        }
+        // status: "draft" | "in_progress" | "completed"
+        if let Some(v) = args.get("status").and_then(|v| v.as_str()) {
+            meta.status = match v {
+                "in_progress" => crate::workspace::data::WorkStatus::InProgress,
+                "completed" => crate::workspace::data::WorkStatus::Completed,
+                _ => crate::workspace::data::WorkStatus::Draft,
+            };
+        }
         meta.updated_at = chrono::Utc::now();
         manager.mark_dirty();
         ok("update_work_meta", args, "元数据已更新")
@@ -206,6 +220,7 @@ impl Tool for UpdateNode {
             "type": "object", "properties": {
                 "node_id": { "type": "string", "description": "节点 UUID" },
                 "name":    { "type": "string", "description": "新的显示名称" },
+                "fields":  { "type": "object", "description": "要更新的节点数据字段（根据节点类型不同，如 age/gender/personality 等）" },
             }, "required": ["node_id"]
         })
     }
@@ -228,6 +243,21 @@ impl Tool for UpdateNode {
         };
         if let Some(v) = args.get("name").and_then(|v| v.as_str()) {
             node.name = v.to_string();
+        }
+        // fields: 将 JSON 对象合并到 NodeData 中（通过序列化→合并→反序列化）
+        if let Some(fields) = args.get("fields").and_then(|v| v.as_object()) {
+            let mut data_json = serde_json::to_value(&node.data).unwrap();
+            if let Some(obj) = data_json.as_object_mut() {
+                for (k, v) in fields {
+                    if k != "type" { // 防止篡改变体类型
+                        obj.insert(k.clone(), v.clone());
+                    }
+                }
+            }
+            node.data = match serde_json::from_value(data_json) {
+                Ok(d) => d,
+                Err(e) => return err("update_node", format!("字段更新失败: {}", e)),
+            };
         }
         manager.mark_dirty();
         ok("update_node", serde_json::json!({ "id": id_str }), "节点已更新")
@@ -409,6 +439,47 @@ impl Tool for SearchNodes {
     }
 }
 
+// ─── GetNodeDetail ───
+
+pub struct GetNodeDetail;
+
+#[async_trait]
+impl Tool for GetNodeDetail {
+    fn name(&self) -> &str { "get_node_detail" }
+    fn description(&self) -> &str { "获取图谱中某个节点的完整数据，包括所有字段" }
+    fn parameters(&self) -> Value {
+        serde_json::json!({
+            "type": "object", "properties": {
+                "node_id": { "type": "string", "description": "节点 UUID" },
+            }, "required": ["node_id"]
+        })
+    }
+    async fn execute(&self, args: Value, manager: &mut WorkManager) -> ToolResult {
+        let id_str = match args.get("node_id").and_then(|v| v.as_str()) {
+            Some(s) => s,
+            None => return err("get_node_detail", "缺少 node_id 参数"),
+        };
+        let node_id = match uuid::Uuid::parse_str(id_str) {
+            Ok(id) => id,
+            Err(_) => return err("get_node_detail", "无效的 node_id 格式"),
+        };
+        let ws = match manager.current() {
+            Some(ws) => ws,
+            None => return err("get_node_detail", "当前没有打开的作品"),
+        };
+        let node = match ws.data.graph.get_node(&node_id) {
+            Some(n) => n,
+            None => return err("get_node_detail", format!("未找到节点: {}", id_str)),
+        };
+        ok("get_node_detail", serde_json::json!({
+            "id": node.id,
+            "name": node.name,
+            "category": &node.category,
+            "data": &node.data,
+        }), "节点详情获取成功")
+    }
+}
+
 // ─── 工厂函数 ───
 
 /// 获取所有真实工具
@@ -423,6 +494,7 @@ pub fn get_real_tools() -> Vec<Box<dyn Tool>> {
         Box::new(AddEdge),
         Box::new(RemoveEdge),
         Box::new(SearchNodes),
+        Box::new(GetNodeDetail),
     ]
 }
 
