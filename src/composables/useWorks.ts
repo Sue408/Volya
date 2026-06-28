@@ -10,6 +10,11 @@ export interface WorkSummary {
   title: string
   status: WorkStatus
   completed_words: number
+  target_words: number | null
+  description: string | null
+  genre: string | null
+  tags: string[]
+  total_tokens: number
   updated_at: string
 }
 
@@ -47,9 +52,25 @@ export function useWorks() {
   /**
    * 创建新作品
    */
-  async function createWork(title: string): Promise<string | null> {
+  async function createWork(
+    title: string,
+    description?: string,
+    targetWords?: number,
+    styleGuide?: string,
+    genre?: string,
+    audience?: string,
+    tags?: string[],
+  ): Promise<string | null> {
     try {
-      const result = await invoke<string>('create_work', { title })
+      const result = await invoke<string>('create_work', {
+        title,
+        description: description ?? null,
+        targetWords: targetWords ?? null,
+        styleGuide: styleGuide ?? null,
+        genre: genre ?? null,
+        audience: audience ?? null,
+        tags: tags ?? null,
+      })
       const parsed = JSON.parse(result)
       // 刷新列表
       await listWorks()

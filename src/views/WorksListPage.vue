@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { Plus, ArrowRight, Trash2, Book, Clock } from '@lucide/vue'
+import { Plus, ArrowRight, Trash2, Book, Clock, FileText, AlignLeft, Sigma, Feather, BookOpen, Users, Tags, ChevronRight } from '@lucide/vue'
 import { useWorks } from '../composables/useWorks'
 
 const router = useRouter()
@@ -11,6 +11,14 @@ const selectedId = ref<string | null>(null)
 const creating = ref(false)
 const showNewDialog = ref(false)
 const newTitle = ref('')
+const newDesc = ref('')
+const showMore = ref(false)
+const newTargetWords = ref<string>('')
+const createError = ref('')
+const newStyleGuide = ref('')
+const newGenre = ref('')
+const newAudience = ref('')
+const newTagInput = ref('')
 const showDeleteConfirm = ref(false)
 const deleteTarget = ref<{ id: string; title: string } | null>(null)
 const deletingId = ref<string | null>(null)
@@ -44,12 +52,48 @@ function openWork(id: string) { router.push(`/works/${id}`) }
 async function handleCreate() {
   const title = newTitle.value.trim()
   if (!title) return
+  createError.value = ''
+
+  // 校验目标字数
+  let targetWordsVal: number | undefined
+  if (newTargetWords.value) {
+    const num = parseInt(newTargetWords.value, 10)
+    if (isNaN(num) || num <= 0) {
+      createError.value = '目标字数请输入大于 0 的数字'
+      return
+    }
+    if (num > 1000) {
+      createError.value = '目标字数范围 1~1000 万'
+      return
+    }
+    targetWordsVal = num
+  }
+
   creating.value = true
-  const id = await createWork(title)
+  const id = await createWork(
+    title,
+    newDesc.value.trim() || undefined,
+    targetWordsVal,
+    newStyleGuide.value.trim() || undefined,
+    newGenre.value.trim() || undefined,
+    newAudience.value.trim() || undefined,
+    parseTags(newTagInput.value),
+  )
   creating.value = false
   showNewDialog.value = false
   newTitle.value = ''
+  newDesc.value = ''
+  showMore.value = false
+  newTargetWords.value = ''
+  newStyleGuide.value = ''
+  newGenre.value = ''
+  newAudience.value = ''
+  newTagInput.value = ''
   if (id) { selectedId.value = id }
+}
+
+function parseTags(input: string): string[] {
+  return input.split(';').map(t => t.trim()).filter(t => t.length > 0)
 }
 
 function confirmDelete(work: { id: string; title: string }) {
@@ -171,6 +215,7 @@ function timeAgo(iso: string): string {
                   <h2 class="detail-title">{{ selectedWork.title }}</h2>
                   <div class="detail-stats">
                     <span class="stat-item">{{ selectedWork.completed_words.toLocaleString() }} 字</span>
+                    <span v-if="selectedWork.target_words" class="stat-item">/ {{ (selectedWork.target_words / 10000).toLocaleString() }} 万</span>
                     <span class="stat-sep">·</span>
                     <span class="stat-item" :class="`s-${selectedWork.status.toLowerCase()}`">{{ statusLabel(selectedWork.status) }}</span>
                     <span class="stat-sep">·</span>
@@ -180,10 +225,16 @@ function timeAgo(iso: string): string {
                 </div>
               </div>
               <div class="detail-divider"></div>
-              <div class="detail-body">
-                <p class="detail-snippet">从这里继续你的故事...</p>
+              <div class="detail-tags">
+                <span v-if="selectedWork.genre" class="detail-genre">{{ selectedWork.genre }}</span>
+                <span v-for="tag in selectedWork.tags" :key="tag" class="detail-tag">{{ tag }}</span>
               </div>
-              <div class="detail-actions">
+              <div class="detail-body">
+                <p v-if="selectedWork.description" class="detail-desc">{{ selectedWork.description }}</p>
+                <p v-else class="detail-snippet">从这里继续你的故事...</p>
+              </div>
+              <div class="detail-footer">
+                <span class="footer-tokens">{{ selectedWork.total_tokens.toLocaleString() }} tokens</span>
                 <button class="detail-btn primary" @click="openWork(selectedWork.id)">
                   <span>继续创作</span>
                   <ArrowRight :size="16" />
@@ -214,15 +265,70 @@ function timeAgo(iso: string): string {
     <!-- 新建作品对话框 -->
     <Teleport to="body">
       <div v-if="showNewDialog" class="dialog-overlay" @click.self="showNewDialog = false">
-        <div class="dialog-card">
+        <div class="dialog-card create-card">
           <h2 class="dialog-title">新建作品</h2>
-          <input
-            v-model="newTitle"
-            class="dialog-input"
-            placeholder="输入作品名称..."
-            @keydown.enter="handleCreate"
-            autofocus
-          />
+
+          <div class="dialog-body">
+            <!-- 核心区 -->
+            <div class="field-group">
+              <label class="field-label"><FileText :size="14" /> 作品名称</label>
+              <input
+                v-model="newTitle"
+                class="dialog-input"
+                placeholder="给故事取个名字..."
+                @keydown.enter="handleCreate"
+                autofocus
+              />
+            </div>
+            <div class="field-group">
+              <label class="field-label"><AlignLeft :size="14" /> 简介</label>
+              <textarea
+                v-model="newDesc"
+                class="dialog-textarea desc-input"
+                placeholder="用一句话说说这是个什么故事（可选）"
+                rows="3"
+              ></textarea>
+            </div>
+
+            <!-- 更多设置 -->
+            <div class="more-toggle" @click="showMore = !showMore">
+              <span class="more-line"></span>
+              <span class="more-label">{{ showMore ? '收起设置' : '更多设置' }}</span>
+              <ChevronRight :size="12" class="more-arrow" :class="{ open: showMore }" />
+            </div>
+
+            <div class="more-fields-wrap" :class="{ open: showMore }">
+              <div class="more-fields">
+                <div class="field-group">
+                  <label class="field-label"><Sigma :size="14" /> 目标字数</label>
+                  <div class="input-suffix">
+                    <input v-model="newTargetWords" class="dialog-input field-input" type="text" inputmode="numeric" placeholder="10" />
+                    <span class="suffix">万</span>
+                  </div>
+                </div>
+                <div class="field-group">
+                  <label class="field-label"><Feather :size="14" /> 风格指南</label>
+                  <textarea v-model="newStyleGuide" class="dialog-textarea" rows="3" placeholder="例：文风参考村上春树，冷峻细腻"></textarea>
+                </div>
+                <div class="field-group">
+                  <label class="field-label"><BookOpen :size="14" /> 体裁</label>
+                  <input v-model="newGenre" class="dialog-input field-input" placeholder="玄幻 / 科幻 / 言情 / 悬疑 ..." />
+                </div>
+                <div class="field-group">
+                  <label class="field-label"><Users :size="14" /> 目标读者</label>
+                  <input v-model="newAudience" class="dialog-input field-input" placeholder="例：18-25 岁女性" />
+                </div>
+                <div class="field-group">
+                  <label class="field-label"><Tags :size="14" /> 标签</label>
+                  <input v-model="newTagInput" class="dialog-input" placeholder="用 ; 分隔多个标签" />
+
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <p v-if="createError" class="create-error">{{ createError }}</p>
+
           <div class="dialog-actions">
             <button class="btn btn-secondary" @click="showNewDialog = false">取消</button>
             <button
@@ -520,6 +626,30 @@ function timeAgo(iso: string): string {
   flex-wrap: wrap;
 }
 
+.detail-metrics {
+  display: flex;
+  gap: var(--space-6);
+}
+
+.metric-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.metric-value {
+  font-family: var(--font-display);
+  font-size: var(--font-size-xl);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.metric-label {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+}
+
 .stat-sep { opacity: 0.3; }
 
 .stat-item.s-inprogress { color: var(--accent-primary); }
@@ -532,9 +662,31 @@ function timeAgo(iso: string): string {
 
 .detail-body {
   flex: 1;
+  min-height: 0;
+  overflow-y: auto;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
+}
+
+.detail-desc {
+  font-family: var(--font-display);
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  line-height: 1.7;
+  text-align: left;
+  width: 100%;
+  white-space: pre-wrap;
+  word-break: break-word;
+  padding-top: var(--space-1);
+}
+
+.detail-snippet {
+  font-family: var(--font-display);
+  font-size: var(--font-size-lg);
+  color: var(--text-tertiary);
+  font-style: italic;
+  text-align: center;
+  margin: auto;
 }
 
 .detail-snippet {
@@ -545,10 +697,45 @@ function timeAgo(iso: string): string {
   text-align: center;
 }
 
-.detail-actions {
+/* ─── 体裁 + 标签 ─── */
+.detail-tags {
   display: flex;
-  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  max-height: 60px;
+  overflow-y: auto;
 }
+
+.detail-genre {
+  padding: 2px 10px;
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--accent-primary) 15%, transparent);
+  color: var(--accent-primary);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+}
+
+.detail-tag {
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  background: var(--bg-tertiary);
+  color: var(--text-tertiary);
+  font-size: var(--font-size-xs);
+}
+
+/* ─── 底部 ─── */
+.detail-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.footer-tokens {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+}
+
 
 .detail-btn {
   display: inline-flex;
@@ -716,6 +903,55 @@ function timeAgo(iso: string): string {
   animation: slideUp 0.25s ease;
 }
 
+.create-card {
+  width: 500px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.dialog-body {
+  flex: 1;
+  overflow-y: auto;
+  margin-bottom: var(--space-5);
+  padding-right: var(--space-1);
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.dialog-body::-webkit-scrollbar {
+  display: none;
+}
+
+.dialog-textarea {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--radius-md);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  background: var(--bg-input);
+  outline: none;
+  resize: none;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  margin-bottom: var(--space-4);
+}
+
+.dialog-textarea:focus {
+  border-color: var(--accent-primary);
+  box-shadow: var(--shadow-focus);
+}
+
+.dialog-textarea::placeholder {
+  color: var(--text-tertiary);
+}
+
+.desc-input {
+  max-height: 5.6em;
+  overflow-y: auto;
+}
+
 @keyframes slideUp {
   from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
@@ -750,6 +986,101 @@ function timeAgo(iso: string): string {
 
 .dialog-input::placeholder {
   color: var(--text-tertiary);
+}
+
+/* ─── 更多设置切换 ─── */
+.more-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+  user-select: none;
+  padding: var(--space-1) 0;
+  margin-bottom: var(--space-3);
+}
+
+.more-line {
+  flex: 1;
+  height: 1px;
+  background: var(--divider-color);
+}
+
+.more-label {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  white-space: nowrap;
+  letter-spacing: 0.04em;
+}
+
+.more-arrow {
+  color: var(--text-tertiary);
+  transition: transform var(--transition-fast);
+}
+
+.more-arrow.open {
+  transform: rotate(90deg);
+}
+
+/* ─── 展开区（带动画） ─── */
+.more-fields-wrap {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 0.35s ease, opacity 0.3s ease;
+}
+
+.more-fields-wrap.open {
+  max-height: 600px;
+  opacity: 1;
+}
+
+.more-fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding-top: var(--space-2);
+}
+
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.field-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.field-input {
+  margin-bottom: 0 !important;
+}
+
+.input-suffix {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.input-suffix .field-input {
+  flex: 1;
+}
+
+.suffix {
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.create-error {
+  font-size: var(--font-size-xs);
+  color: var(--error);
+  margin-bottom: var(--space-3);
+  text-align: right;
 }
 
 .dialog-actions {

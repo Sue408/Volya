@@ -102,6 +102,11 @@ pub struct WorkSummary {
     pub title: String,
     pub status: WorkStatus,
     pub completed_words: u64,
+    pub target_words: Option<u64>,
+    pub description: Option<String>,
+    pub genre: Option<String>,
+    pub tags: Vec<String>,
+    pub total_tokens: u64,
     pub updated_at: chrono::DateTime<chrono::Utc>,
 }
 

@@ -15,12 +15,38 @@ pub struct AppState {
 
 /// 创建新作品并初始化会话
 #[tauri::command]
-pub async fn create_work(app_handle: tauri::AppHandle, state: State<'_, AppState>, title: String) -> Result<String, String> {
+pub async fn create_work(
+    app_handle: tauri::AppHandle,
+    state: State<'_, AppState>,
+    title: String,
+    description: Option<String>,
+    target_words: Option<u64>,
+    style_guide: Option<String>,
+    genre: Option<String>,
+    audience: Option<String>,
+    tags: Option<Vec<String>>,
+) -> Result<String, String> {
     use tauri::Emitter;
 
     let mut manager_lock = state.manager.lock().await;
-    let ws = manager_lock.create(&title).await.map_err(|e| format!("创建失败: {}", e))?;
-    let work_data = ws.data.clone();
+
+    let (work_data, work_id) = {
+        let ws = manager_lock.create(&title).await.map_err(|e| format!("创建失败: {}", e))?;
+
+        // 回填可选字段
+        let meta = &mut ws.data.meta;
+        if let Some(v) = description { if !v.is_empty() { meta.description = Some(v); } }
+        if let Some(v) = target_words { if v > 0 { meta.target_words = Some(v * 10000); } }
+        if let Some(v) = style_guide { if !v.is_empty() { meta.style_guide = Some(v); } }
+        if let Some(v) = genre { if !v.is_empty() { meta.genre = Some(v); } }
+        if let Some(v) = audience { if !v.is_empty() { meta.audience = Some(v); } }
+        if let Some(v) = tags { if !v.is_empty() { meta.tags = v; } }
+
+        (ws.data.clone(), ws.id.clone())
+    };
+    // ws 已释放，保存到磁盘
+    manager_lock.save_current().await.map_err(|e| format!("保存失败: {}", e))?;
+
     let session = SessionLoop::new(work_data, 1);
 
     let mut session_lock = state.session.lock().await;
@@ -30,7 +56,7 @@ pub async fn create_work(app_handle: tauri::AppHandle, state: State<'_, AppState
         "state": "idle", "tool_name": None::<String>
     }));
 
-    Ok(serde_json::json!({ "id": ws.id, "title": title }).to_string())
+    Ok(serde_json::json!({ "id": work_id, "title": title }).to_string())
 }
 
 /// 列出所有已有作品
@@ -44,6 +70,11 @@ pub async fn list_works(state: State<'_, AppState>) -> Result<Vec<serde_json::Va
             "title": s.title,
             "status": s.status,
             "completed_words": s.completed_words,
+            "target_words": s.target_words,
+            "description": s.description,
+            "genre": s.genre,
+            "tags": s.tags,
+            "total_tokens": s.total_tokens,
             "updated_at": s.updated_at,
         })
     }).collect())

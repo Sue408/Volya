@@ -31,6 +31,11 @@ impl WorkSpace {
             title: self.data.meta.title.clone(),
             status: self.data.meta.status.clone(),
             completed_words: self.data.meta.completed_words,
+            target_words: self.data.meta.target_words,
+            description: self.data.meta.description.clone(),
+            genre: self.data.meta.genre.clone(),
+            tags: self.data.meta.tags.clone(),
+            total_tokens: self.data.meta.total_tokens,
             updated_at: self.data.meta.updated_at,
         }
     }
@@ -161,6 +166,11 @@ impl WorkManager {
                         title: meta.title,
                         status: meta.status,
                         completed_words: meta.completed_words,
+                        target_words: meta.target_words,
+                        description: meta.description.clone(),
+                        genre: meta.genre.clone(),
+                        tags: meta.tags.clone(),
+                        total_tokens: meta.total_tokens,
                         updated_at: meta.updated_at,
                     });
                 }
