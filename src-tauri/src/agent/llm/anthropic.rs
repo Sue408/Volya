@@ -156,6 +156,41 @@ impl AnthropicClient {
         }
     }
 
+    /// 测试连接：发送一条极简消息（~10 tokens），验证 API 是否可用
+    pub async fn check_connectivity(&self) -> Result<String, AnthropicError> {
+        let request_body = MessagesRequest {
+            model: self.model.clone(),
+            max_tokens: 10,
+            temperature: Some(0.0),
+            system: String::new(),
+            messages: vec![AnthropicMessage {
+                role: "user".into(),
+                content: vec![ContentBlock::Text { text: "Hi".into() }],
+            }],
+            tools: None,
+            stream: false,
+        };
+
+        let url = format!("{}/v1/messages", self.api_base);
+        let mut req = self.http_client.post(&url)
+            .header("x-api-key", &self.api_key)
+            .header("content-type", "application/json");
+        if self.api_base.contains("anthropic.com") {
+            req = req.header("anthropic-version", "2023-06-01");
+        }
+        let response = req.json(&request_body).send().await?;
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let body = response.text().await.unwrap_or_default();
+            return Err(AnthropicError::ApiError(status.as_u16(), body));
+        }
+
+        let data: Value = response.json().await.map_err(AnthropicError::Http)?;
+        let content = data["content"][0]["text"].as_str().unwrap_or("ok").to_string();
+        Ok(content)
+    }
+
     pub async fn stream_completion(
         &self,
         system: &str,

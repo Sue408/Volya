@@ -236,6 +236,15 @@ pub async fn get_session_state(state: State<'_, AppState>) -> Result<serde_json:
 #[tauri::command]
 pub async fn get_llm_config() -> Result<serde_json::Value, String> {
     let config = crate::agent::llm::config::GlobalConfig::load();
+    let masked = if config.llm.api_key.len() > 8 {
+        let (start, rest) = config.llm.api_key.split_at(7);
+        let end = &rest[rest.len().saturating_sub(4)..];
+        format!("{}...{}", start, end)
+    } else if !config.llm.api_key.is_empty() {
+        "***".to_string()
+    } else {
+        String::new()
+    };
     Ok(serde_json::json!({
         "configured": !config.llm.api_key.is_empty(),
         "provider": config.llm.provider,
@@ -244,6 +253,7 @@ pub async fn get_llm_config() -> Result<serde_json::Value, String> {
         "max_tokens": config.llm.max_tokens,
         "temperature": config.llm.temperature,
         "has_api_key": !config.llm.api_key.is_empty(),
+        "masked_api_key": masked,
     }))
 }
 
@@ -274,21 +284,24 @@ pub async fn save_llm_config(
 
 /// 检查 LLM 连接状态
 #[tauri::command]
-pub async fn check_llm_connection(state: State<'_, AppState>) -> Result<serde_json::Value, String> {
-    let session_lock = state.session.lock().await;
-    let session = session_lock.as_ref().ok_or("会话未初始化")?;
-
-    let ready = session.agent.is_llm_ready();
+pub async fn check_llm_connection() -> Result<serde_json::Value, String> {
     let config = crate::agent::llm::config::GlobalConfig::load();
+    if !config.is_valid() {
+        return Ok(serde_json::json!({
+            "ready": false,
+            "message": "尚未配置 API Key，请在设置中配置"
+        }));
+    }
 
-    Ok(serde_json::json!({
-        "ready": ready,
-        "provider": config.llm.provider,
-        "model": config.llm.model,
-        "message": if ready {
-            "LLM 已就绪，可以开始对话 🚀"
-        } else {
-            "⚠️ 尚未配置 API Key，请在设置中配置"
-        }
-    }))
+    let client = crate::agent::llm::anthropic::AnthropicClient::new(&config.llm);
+    match client.check_connectivity().await {
+        Ok(_) => Ok(serde_json::json!({
+            "ready": true,
+            "message": "连接成功"
+        })),
+        Err(e) => Ok(serde_json::json!({
+            "ready": false,
+            "message": format!("{}", e)
+        })),
+    }
 }

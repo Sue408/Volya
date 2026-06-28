@@ -1,14 +1,9 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { ref, onMounted } from 'vue'
 import { getCurrentWindow } from '@tauri-apps/api/window'
-import { ChevronLeft, Sun, Moon, Settings, Minus, Maximize2, Minimize2, X } from '@lucide/vue'
-import { useAgent } from '../composables/useAgent'
+import { Sun, Moon, Settings, Minus, Maximize2, Minimize2, X } from '@lucide/vue'
 import { useTheme } from '../composables/useTheme'
 
-const router = useRouter()
-const route = useRoute()
-const { currentWorkTitle } = useAgent()
 const { effectiveTheme, toggleTheme } = useTheme()
 const isMaximized = ref(false)
 
@@ -23,26 +18,7 @@ onMounted(async () => {
   } catch { /* 非 Tauri 环境 */ }
 })
 
-/** 页面主标题 */
-const pageTitle = computed(() => {
-  if (route.name === 'settings') return '设置'
-  return 'Volya'
-})
-
-/** 子标题（工作页显示作品名） */
-const pageSubtitle = computed(() => {
-  if (route.name === 'work') {
-    return currentWorkTitle.value || '未命名作品'
-  }
-  return ''
-})
-
-/** 是否显示返回按钮 */
-const showBack = computed(() => route.name !== 'works')
-
-function goBack() {
-  router.push('/')
-}
+/** 标题始终为 Volya，不随页面变化 */
 
 // ─── 窗口控制 ───
 async function handleMinimize() {
@@ -62,14 +38,9 @@ async function handleClose() {
 
 <template>
   <header class="titlebar" data-tauri-drag-region>
-    <!-- 左侧 — 返回 + 标题（无图标） -->
+    <!-- 左侧 — Logo 标题，始终不变 -->
     <div class="titlebar-left">
-      <button v-if="showBack" class="tb-btn" @click="goBack" title="返回">
-        <ChevronLeft :size="20" />
-      </button>
-      <span class="tb-title">{{ pageTitle }}</span>
-      <span v-if="pageSubtitle" class="tb-sep">/</span>
-      <span v-if="pageSubtitle" class="tb-subtitle">{{ pageSubtitle }}</span>
+      <span class="tb-title">Volya</span>
     </div>
 
     <!-- 中间 — 拖拽区 -->
@@ -128,19 +99,6 @@ async function handleClose() {
   white-space: nowrap;
   line-height: 1;
   letter-spacing: 0.06em;
-}
-
-.tb-sep {
-  color: var(--text-tertiary);
-  font-size: var(--font-size-sm);
-}
-
-.tb-subtitle {
-  font-size: var(--font-size-base);
-  color: var(--text-secondary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 /* ─── 中间拖拽区 ─── */

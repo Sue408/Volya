@@ -266,6 +266,7 @@ export function useAgent() {
     maxTokens: 4096,
     temperature: 0.7,
     hasApiKey: false,
+    maskedApiKey: '',
   })
 
   const llmReady = ref(false)
@@ -281,6 +282,7 @@ export function useAgent() {
         maxTokens: config.max_tokens,
         temperature: config.temperature,
         hasApiKey: config.has_api_key,
+        maskedApiKey: config.masked_api_key || '',
       }
       llmReady.value = config.has_api_key
     } catch (e) {
