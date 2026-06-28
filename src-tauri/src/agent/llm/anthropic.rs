@@ -95,6 +95,7 @@ struct ContentBlockStartData {
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 struct ContentDelta {
     #[serde(rename = "type")]
     #[serde(default)]
@@ -111,6 +112,7 @@ struct MessageDeltaData {
     stop_reason: Option<String>,
 }
 
+#[allow(dead_code)]
 pub struct CompletionResult {
     pub content_blocks: Vec<ContentBlock>,
     pub stop_reason: Option<String>,

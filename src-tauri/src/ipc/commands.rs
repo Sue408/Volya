@@ -250,7 +250,7 @@ pub async fn get_llm_config() -> Result<serde_json::Value, String> {
 /// 保存 LLM 配置
 #[tauri::command]
 pub async fn save_llm_config(
-    state: State<'_, AppState>,
+    _state: State<'_, AppState>,
     api_key: String,
     api_base: String,
     model: String,

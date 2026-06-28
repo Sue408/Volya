@@ -61,7 +61,7 @@ pub struct PendingApprovalItem {
     pub tool_use_id: String,
     pub tool_name: String,
     pub tool_args: serde_json::Value,
-    pub reason: String,
+    pub _reason: String,
 }
 
 /// LLM 循环模式：控制遇到待审批项时自动执行结果的处理方式
@@ -114,18 +114,6 @@ impl NovelAgent {
         SYSTEM_PROMPT_TEMPLATE.replace("{tool_descriptions}", &tool_desc)
     }
 
-    /// 构建 Anthropic 消息列表
-    fn build_messages(&self, user_message: &str) -> Vec<AnthropicMessage> {
-        let mut messages = self.conversation_history.clone();
-        messages.push(AnthropicMessage {
-            role: "user".to_string(),
-            content: vec![ContentBlock::Text {
-                text: user_message.to_string(),
-            }],
-        });
-        messages
-    }
-
     fn add_assistant_response(&mut self, content_blocks: Vec<ContentBlock>) {
         self.conversation_history.push(AnthropicMessage {
             role: "assistant".to_string(),
@@ -133,15 +121,6 @@ impl NovelAgent {
         });
     }
 
-    fn add_tool_result(&mut self, tool_use_id: &str, result: &ToolResult) {
-        self.conversation_history.push(AnthropicMessage {
-            role: "user".to_string(),
-            content: vec![ContentBlock::ToolResult {
-                tool_use_id: tool_use_id.to_string(),
-                content: serde_json::to_string(&result.data).unwrap_or_default(),
-            }],
-        });
-    }
 
     fn extract_tool_uses(blocks: &[ContentBlock]) -> Vec<(String, String, serde_json::Value)> {
         blocks.iter().filter_map(|block| match block {
@@ -249,7 +228,7 @@ impl NovelAgent {
                             tool_use_id: tool_use_id.clone(),
                             tool_name: tool.clone(),
                             tool_args: tool_args.clone(),
-                            reason,
+                            _reason: reason,
                         });
                     }
                     GateDecision::Denied { reason } => {
